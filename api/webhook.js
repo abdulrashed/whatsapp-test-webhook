@@ -39,13 +39,13 @@ export default async function handler(req, res) {
     return;
   }
 
-  res.status(200).send("EVENT_RECEIVED");
-
   try {
     const payload = JSON.parse(rawBody.toString("utf8"));
     await handleWebhookPayload(payload);
+    res.status(200).send("EVENT_RECEIVED");
   } catch (error) {
     logError("Vercel webhook processing failed", error);
+    res.status(500).send("Webhook processing failed");
   }
 }
 
