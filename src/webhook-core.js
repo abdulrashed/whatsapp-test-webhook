@@ -114,9 +114,7 @@ async function respondToMessage(from, message) {
     return;
   }
 
-  const text = (message.text?.body || "").trim().toLowerCase();
-
-  if (message.type === "text" && ["hi", "hello", "hey", "start"].includes(text)) {
+  if (message.type === "text") {
     await sendTextMessage(
       from,
       "Welcome. This is the WhatsApp test booking flow. Please choose an option below."
@@ -125,7 +123,8 @@ async function respondToMessage(from, message) {
     return;
   }
 
-  await sendTextMessage(from, "Please send Hi to start the test booking flow.");
+  await sendTextMessage(from, "Thanks. Please use one of the booking options below.");
+  await sendBookingButtons(from);
 }
 
 async function respondToButton(from, buttonId) {
