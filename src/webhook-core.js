@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { config } from "./config.js";
 import { hasSeenEvent } from "./dedupe.js";
 import { logError, logInfo, logWarn } from "./logger.js";
-import { sendBookingButtons, sendTextMessage } from "./whatsapp.js";
+import { sendMainMenu, sendTextMessage } from "./whatsapp.js";
 
 export function verifyWebhookQuery(query) {
   const mode = query["hub.mode"];
@@ -78,12 +78,25 @@ async function handleMessagesChange(value) {
       logInfo("Duplicate status ignored", { statusEventId });
       continue;
     }
-    logInfo("Message status received", {
+    const statusDetails = {
       id: status.id,
       status: status.status,
       timestamp: status.timestamp,
       recipientId: status.recipient_id
-    });
+    };
+
+    // A "failed" status carries the real reason a 200-accepted message
+    // never reached the recipient (wrong format, no WhatsApp, template
+    // not approved, recipient not on a test number's allow-list, etc.).
+    if (status.status === "failed" || status.errors?.length) {
+      logError("WhatsApp message delivery failed", {
+        ...statusDetails,
+        errors: status.errors
+      });
+      continue;
+    }
+
+    logInfo("Message status received", statusDetails);
   }
 
   for (const message of value.messages || []) {
@@ -125,52 +138,51 @@ async function respondToMessage(from, message, phoneNumberId) {
   }
 
   if (message.type === "interactive") {
-    await respondToButton(from, message.interactive?.button_reply?.id, phoneNumberId);
+    // Read both reply shapes: taps on the three-button menu arrive as
+    // button_reply, while list rows (used later for My Bookings) arrive as
+    // list_reply. Reading only button_reply would drop list selections into
+    // the default branch.
+    const replyId =
+      message.interactive?.button_reply?.id ?? message.interactive?.list_reply?.id;
+    await respondToButton(from, replyId, phoneNumberId);
     return;
   }
 
   if (message.type === "text") {
-    await sendTextMessage(
-      from,
-      "Welcome. This is the WhatsApp test booking flow. Please choose an option below.",
-      phoneNumberId
-    );
-    await sendBookingButtons(from, phoneNumberId);
+    // Any text (Hi, hello, menu, or a stray message) shows the menu for now.
+    // Phase 1 adds a session so "human" mode keeps the bot quiet after a handoff.
+    await sendMainMenu(from, config.venueName, phoneNumberId);
     return;
   }
 
-  await sendTextMessage(from, "Thanks. Please use one of the booking options below.", phoneNumberId);
-  await sendBookingButtons(from, phoneNumberId);
+  await sendMainMenu(from, config.venueName, phoneNumberId);
 }
 
 async function respondToButton(from, buttonId, phoneNumberId) {
   switch (buttonId) {
-    case "book_turf":
+    case "book_slot":
       await sendTextMessage(
         from,
-        "Booking test selected. Next stage will connect court selection and live availability.",
+        "Great — let's book your slot. The booking form opens here next; we're wiring it up now.",
         phoneNumberId
       );
       break;
-    case "view_slots":
+    case "my_bookings":
       await sendTextMessage(
         from,
-        "Slot viewing test selected. Next stage will fetch available slots from the booking system.",
+        "You'll be able to view your upcoming bookings here shortly.",
         phoneNumberId
       );
       break;
-    case "contact_staff":
+    case "chat_venue":
       await sendTextMessage(
         from,
-        "Staff contact test selected. A team member handoff can be added later.",
+        `You're now connected to *${config.venueName}*. Please type your question and our team will get back to you shortly.\n\n` +
+          "Type *menu* anytime to return to the main options.",
         phoneNumberId
       );
       break;
     default:
-      await sendTextMessage(
-        from,
-        "Button received. Please send Hi to restart the test flow.",
-        phoneNumberId
-      );
+      await sendMainMenu(from, config.venueName, phoneNumberId);
   }
 }

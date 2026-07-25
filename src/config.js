@@ -26,7 +26,10 @@ export const config = {
   wabaId: process.env.WHATSAPP_WABA_ID || "",
   verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || "",
   metaAppSecret: process.env.META_APP_SECRET || "",
-  validateMetaSignature: process.env.VALIDATE_META_SIGNATURE !== "false"
+  validateMetaSignature: process.env.VALIDATE_META_SIGNATURE !== "false",
+  // Shown in the greeting. Temporary: once venues are onboarded this comes from
+  // the wa_numbers/{phone_number_id} lookup so one deployment can serve many venues.
+  venueName: process.env.VENUE_NAME || "our venue"
 };
 
 export function assertCanSendMessages() {

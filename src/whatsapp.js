@@ -38,44 +38,36 @@ export async function sendTextMessage(to, body, phoneNumberId) {
   );
 }
 
-export async function sendBookingButtons(to, phoneNumberId) {
-  return sendMessage({
-    messaging_product: "whatsapp",
-    recipient_type: "individual",
-    to,
-    type: "interactive",
-    interactive: {
-      type: "button",
-      body: {
-        text: "Choose an option to continue."
-      },
-      action: {
-        buttons: [
-          {
-            type: "reply",
-            reply: {
-              id: "book_turf",
-              title: "Book Turf"
-            }
-          },
-          {
-            type: "reply",
-            reply: {
-              id: "view_slots",
-              title: "View Slots"
-            }
-          },
-          {
-            type: "reply",
-            reply: {
-              id: "contact_staff",
-              title: "Contact Staff"
-            }
-          }
-        ]
+// The greeting lives in the interactive body rather than a separate text message:
+// api/webhook.js awaits every send before ACKing Meta, so one call instead of two
+// halves that window and keeps the menu from arriving as two chat bubbles.
+export async function sendMainMenu(to, venueName, phoneNumberId) {
+  return sendMessage(
+    {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "interactive",
+      interactive: {
+        type: "button",
+        body: {
+          text:
+            `👋 Welcome to *${venueName}* — powered by GameOn!\n\n` +
+            "I can help you book a turf, check your bookings, or connect you with our team.\n\n" +
+            "What would you like to do?"
+        },
+        action: {
+          // Max 3 reply buttons, titles capped at 20 characters by WhatsApp.
+          buttons: [
+            { type: "reply", reply: { id: "book_slot", title: "Book a Slot" } },
+            { type: "reply", reply: { id: "my_bookings", title: "My Bookings" } },
+            { type: "reply", reply: { id: "chat_venue", title: "Chat with Venue" } }
+          ]
+        }
       }
-    }
-  }, phoneNumberId);
+    },
+    phoneNumberId
+  );
 }
 
 export async function sendTemplateHelloWorld(to, phoneNumberId) {
