@@ -1,5 +1,6 @@
 import crypto from "crypto";
 
+import { config } from "./config.js";
 import { hasSeenEvent } from "./dedupe.js";
 import { logError, logInfo, logWarn } from "./logger.js";
 import { getSession, isHumanMode, setMode } from "./session.js";
