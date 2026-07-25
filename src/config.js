@@ -27,9 +27,22 @@ export const config = {
   verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || "",
   metaAppSecret: process.env.META_APP_SECRET || "",
   validateMetaSignature: process.env.VALIDATE_META_SIGNATURE !== "false",
-  // Shown in the greeting. Temporary: once venues are onboarded this comes from
-  // the wa_numbers/{phone_number_id} lookup so one deployment can serve many venues.
-  venueName: process.env.VENUE_NAME || "our venue"
+  // Fallback venue name for the greeting when no wa_numbers mapping is found.
+  venueName: process.env.VENUE_NAME || "our venue",
+  // How long a "chat with venue" handoff keeps the bot silent before it
+  // resumes on its own (customer can also type "menu" to resume immediately).
+  humanModeTtlMs: Number(process.env.HUMAN_MODE_TTL_MS || 6 * 60 * 60 * 1000),
+  // Firebase Web config for the GameOn project (turf-app-930c5). These are
+  // public client identifiers (already shipped in the app bundle), not secrets;
+  // env vars let a different project be pointed at without a code change.
+  firebase: {
+    apiKey: process.env.FIREBASE_API_KEY || "AIzaSyAMzw-tuYosbt0LOLo4vfRC0KB86BJDdv4",
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN || "turf-app-930c5.firebaseapp.com",
+    projectId: process.env.FIREBASE_PROJECT_ID || "turf-app-930c5",
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "turf-app-930c5.firebasestorage.app",
+    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || "355894469860",
+    appId: process.env.FIREBASE_APP_ID || "1:355894469860:web:a268daa36bb5eb29a778f1"
+  }
 };
 
 export function assertCanSendMessages() {

@@ -1,9 +1,17 @@
 import crypto from "crypto";
 
-import { config } from "./config.js";
 import { hasSeenEvent } from "./dedupe.js";
 import { logError, logInfo, logWarn } from "./logger.js";
+import { getSession, isHumanMode, setMode } from "./session.js";
+import { resolveVenue } from "./venues.js";
 import { sendMainMenu, sendTextMessage } from "./whatsapp.js";
+
+// Words that bring the customer back to the bot from a "chat with venue" handoff.
+const RESET_KEYWORDS = new Set(["menu", "hi", "hello", "start", "back"]);
+
+function isResetKeyword(text) {
+  return typeof text === "string" && RESET_KEYWORDS.has(text.trim().toLowerCase());
+}
 
 export function verifyWebhookQuery(query) {
   const mode = query["hub.mode"];
@@ -57,13 +65,43 @@ export async function handleWebhookPayload(payload) {
 
   for (const entry of payload.entry || []) {
     for (const change of entry.changes || []) {
-      if (change.field !== "messages") {
-        logInfo("Ignoring unsupported webhook field", { field: change.field });
+      if (change.field === "messages") {
+        await handleMessagesChange(change.value || {});
         continue;
       }
 
-      await handleMessagesChange(change.value || {});
+      // Coexistence: the venue owner replied to a customer from the WhatsApp
+      // Business app. That reply arrives here as an echo, and it means a human
+      // has taken over — put that customer in "human" mode so the bot stops
+      // auto-replying over the owner.
+      if (change.field === "smb_message_echoes") {
+        await handleMessageEchoes(change.value || {});
+        continue;
+      }
+
+      logInfo("Ignoring unsupported webhook field", { field: change.field });
     }
+  }
+}
+
+// NOTE: the exact echo payload shape is not verified against a live coexistence
+// account yet. We defensively pull the customer number from each echo's `to`
+// (falling back to `recipient_id`) and mark that conversation human.
+async function handleMessageEchoes(value) {
+  const phoneNumberId = value.metadata?.phone_number_id;
+  const echoes = value.message_echoes || value.messages || [];
+
+  for (const echo of echoes) {
+    const customer = echo.to || echo.recipient_id;
+    if (!customer) {
+      continue;
+    }
+    const echoEventId = `echo:${echo.id || `${customer}:${echo.timestamp || ""}`}`;
+    if (hasSeenEvent(echoEventId)) {
+      continue;
+    }
+    logInfo("Owner replied from Business app, pausing bot", { customer, phoneNumberId });
+    await setMode(customer, "human", { phoneNumberId, lastHumanAt: Date.now() });
   }
 }
 
@@ -137,30 +175,37 @@ async function respondToMessage(from, message, phoneNumberId) {
     return;
   }
 
-  if (message.type === "interactive") {
-    // Read both reply shapes: taps on the three-button menu arrive as
-    // button_reply, while list rows (used later for My Bookings) arrive as
-    // list_reply. Reading only button_reply would drop list selections into
-    // the default branch.
-    const replyId =
-      message.interactive?.button_reply?.id ?? message.interactive?.list_reply?.id;
-    await respondToButton(from, replyId, phoneNumberId);
+  const replyId =
+    message.type === "interactive"
+      ? message.interactive?.button_reply?.id ?? message.interactive?.list_reply?.id
+      : null;
+  const text = message.text?.body;
+
+  // During a "chat with venue" handoff the bot stays silent so the venue owner
+  // owns the conversation. A reset keyword (or tapping a menu button) ends the
+  // handoff and brings the bot back.
+  const session = await getSession(from);
+  if (isHumanMode(session) && !replyId && !isResetKeyword(text)) {
+    logInfo("Conversation in human mode, bot staying silent", { from });
     return;
   }
 
-  if (message.type === "text") {
-    // Any text (Hi, hello, menu, or a stray message) shows the menu for now.
-    // Phase 1 adds a session so "human" mode keeps the bot quiet after a handoff.
-    await sendMainMenu(from, config.venueName, phoneNumberId);
+  const { venueName } = await resolveVenue(phoneNumberId);
+
+  if (replyId) {
+    await respondToButton(from, replyId, phoneNumberId, venueName);
     return;
   }
 
-  await sendMainMenu(from, config.venueName, phoneNumberId);
+  // Any text (Hi, hello, menu, or a stray message) resets to the menu.
+  await setMode(from, "bot", { phoneNumberId });
+  await sendMainMenu(from, venueName, phoneNumberId);
 }
 
-async function respondToButton(from, buttonId, phoneNumberId) {
+async function respondToButton(from, buttonId, phoneNumberId, venueName) {
   switch (buttonId) {
     case "book_slot":
+      await setMode(from, "bot", { phoneNumberId });
       await sendTextMessage(
         from,
         "Great — let's book your slot. The booking form opens here next; we're wiring it up now.",
@@ -168,6 +213,7 @@ async function respondToButton(from, buttonId, phoneNumberId) {
       );
       break;
     case "my_bookings":
+      await setMode(from, "bot", { phoneNumberId });
       await sendTextMessage(
         from,
         "You'll be able to view your upcoming bookings here shortly.",
@@ -175,14 +221,18 @@ async function respondToButton(from, buttonId, phoneNumberId) {
       );
       break;
     case "chat_venue":
+      // Hand off to the venue. Under coexistence the customer's next messages
+      // land in the owner's Business app; here we just stop auto-replying.
+      await setMode(from, "human", { phoneNumberId, lastHumanAt: Date.now() });
       await sendTextMessage(
         from,
-        `You're now connected to *${config.venueName}*. Please type your question and our team will get back to you shortly.\n\n` +
+        `You're now connected to *${venueName}*. Please type your question and our team will get back to you shortly.\n\n` +
           "Type *menu* anytime to return to the main options.",
         phoneNumberId
       );
       break;
     default:
-      await sendMainMenu(from, config.venueName, phoneNumberId);
+      await setMode(from, "bot", { phoneNumberId });
+      await sendMainMenu(from, venueName, phoneNumberId);
   }
 }
