@@ -32,6 +32,17 @@ export const config = {
   // How long a "chat with venue" handoff keeps the bot silent before it
   // resumes on its own (customer can also type "menu" to resume immediately).
   humanModeTtlMs: Number(process.env.HUMAN_MODE_TTL_MS || 6 * 60 * 60 * 1000),
+  // WhatsApp Flow endpoint. FLOW_PRIVATE_KEY is the RSA private key (PEM) whose
+  // public half is uploaded to Meta; \n may be escaped in the env var. FLOW_ID
+  // is the published Flow's id, used when sending the Flow message.
+  flowId: process.env.FLOW_ID || "",
+  flowPrivateKey: (process.env.FLOW_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
+  flowKeyPassphrase: process.env.FLOW_KEY_PASSPHRASE || "",
+  // Base URL of the hosted Razorpay checkout page (v2_checkout_live.html).
+  checkoutBaseUrl:
+    process.env.CHECKOUT_BASE_URL || "https://eleganzainfotech.com/v2_checkout_live.html",
+  createOrderUrl:
+    process.env.CREATE_ORDER_URL || "https://eleganzainfotech.com/v2_create_order_live.php",
   // Firebase Web config for the GameOn project (turf-app-930c5). These are
   // public client identifiers (already shipped in the app bundle), not secrets;
   // env vars let a different project be pointed at without a code change.

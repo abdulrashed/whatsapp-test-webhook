@@ -12,6 +12,10 @@
     {
       "source": "/send-template",
       "destination": "/api/send-template"
+    },
+    {
+      "source": "/flow",
+      "destination": "/api/flow"
     }
   ]
 }

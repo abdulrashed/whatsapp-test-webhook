@@ -1,0 +1,293 @@
+{
+  "version": "7.0",
+  "data_api_version": "3.0",
+  "routing_model": {
+    "SPORT": ["DATE", "INFO"],
+    "DATE": ["COURT", "TIME", "INFO"],
+    "COURT": ["TIME", "INFO"],
+    "TIME": ["DURATION", "INFO"],
+    "DURATION": ["SUMMARY", "INFO"],
+    "SUMMARY": [],
+    "INFO": []
+  },
+  "screens": [
+    {
+      "id": "SPORT",
+      "title": "Choose a sport",
+      "data": {
+        "sports": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" }
+            }
+          },
+          "__example__": [{ "id": "Football", "title": "Football" }]
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "RadioButtonsGroup",
+            "name": "sport",
+            "label": "Sport",
+            "required": true,
+            "data-source": "${data.sports}"
+          },
+          {
+            "type": "Footer",
+            "label": "Next",
+            "on-click-action": {
+              "name": "data_exchange",
+              "payload": { "sport_name": "${form.sport}" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "DATE",
+      "title": "Select a date",
+      "data": {
+        "min_date": { "type": "string", "__example__": "2026-07-26" },
+        "max_date": { "type": "string", "__example__": "2026-08-25" },
+        "sport_name": { "type": "string", "__example__": "Football" }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "DatePicker",
+            "name": "date",
+            "label": "Date",
+            "required": true,
+            "min-date": "${data.min_date}",
+            "max-date": "${data.max_date}"
+          },
+          {
+            "type": "Footer",
+            "label": "Next",
+            "on-click-action": {
+              "name": "data_exchange",
+              "payload": {
+                "sport_name": "${data.sport_name}",
+                "date": "${form.date}"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "COURT",
+      "title": "Choose a court",
+      "data": {
+        "courts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" }
+            }
+          },
+          "__example__": [{ "id": "court1", "title": "Court 1" }]
+        },
+        "sport_name": { "type": "string", "__example__": "Football" },
+        "date": { "type": "string", "__example__": "2026-07-26" }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "RadioButtonsGroup",
+            "name": "court",
+            "label": "Court",
+            "required": true,
+            "data-source": "${data.courts}"
+          },
+          {
+            "type": "Footer",
+            "label": "Next",
+            "on-click-action": {
+              "name": "data_exchange",
+              "payload": {
+                "sport_name": "${data.sport_name}",
+                "date": "${data.date}",
+                "court_id": "${form.court}"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "TIME",
+      "title": "Pick a start time",
+      "data": {
+        "times": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" }
+            }
+          },
+          "__example__": [{ "id": "06:00", "title": "6:00 AM" }]
+        },
+        "sport_name": { "type": "string", "__example__": "Football" },
+        "date": { "type": "string", "__example__": "2026-07-26" },
+        "court_id": { "type": "string", "__example__": "court1" },
+        "court_name": { "type": "string", "__example__": "Court 1" }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "RadioButtonsGroup",
+            "name": "start_time",
+            "label": "Start time",
+            "required": true,
+            "data-source": "${data.times}"
+          },
+          {
+            "type": "Footer",
+            "label": "Next",
+            "on-click-action": {
+              "name": "data_exchange",
+              "payload": {
+                "sport_name": "${data.sport_name}",
+                "date": "${data.date}",
+                "court_id": "${data.court_id}",
+                "court_name": "${data.court_name}",
+                "start_time": "${form.start_time}"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "DURATION",
+      "title": "How long?",
+      "data": {
+        "durations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" }
+            }
+          },
+          "__example__": [{ "id": "1", "title": "1 hour · ends 7:00 AM · ₹300" }]
+        },
+        "sport_name": { "type": "string", "__example__": "Football" },
+        "date": { "type": "string", "__example__": "2026-07-26" },
+        "court_id": { "type": "string", "__example__": "court1" },
+        "court_name": { "type": "string", "__example__": "Court 1" },
+        "start_time": { "type": "string", "__example__": "06:00" }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Dropdown",
+            "name": "duration",
+            "label": "Duration",
+            "required": true,
+            "data-source": "${data.durations}"
+          },
+          {
+            "type": "Footer",
+            "label": "Review",
+            "on-click-action": {
+              "name": "data_exchange",
+              "payload": {
+                "sport_name": "${data.sport_name}",
+                "date": "${data.date}",
+                "court_id": "${data.court_id}",
+                "court_name": "${data.court_name}",
+                "start_time": "${data.start_time}",
+                "duration": "${form.duration}"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "SUMMARY",
+      "title": "Confirm & pay",
+      "terminal": true,
+      "data": {
+        "summary_text": { "type": "string", "__example__": "Booking summary" },
+        "sport_name": { "type": "string", "__example__": "Football" },
+        "date": { "type": "string", "__example__": "2026-07-26" },
+        "court_id": { "type": "string", "__example__": "court1" },
+        "court_name": { "type": "string", "__example__": "Court 1" },
+        "start_time": { "type": "string", "__example__": "06:00" },
+        "end_time": { "type": "string", "__example__": "08:00" },
+        "price": { "type": "string", "__example__": "600" },
+        "advance": { "type": "string", "__example__": "200" },
+        "pay_amount": { "type": "string", "__example__": "200" }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "${data.summary_text}"
+          },
+          {
+            "type": "Footer",
+            "label": "Confirm & Pay",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "sport_name": "${data.sport_name}",
+                "date": "${data.date}",
+                "court_id": "${data.court_id}",
+                "court_name": "${data.court_name}",
+                "start_time": "${data.start_time}",
+                "end_time": "${data.end_time}",
+                "price": "${data.price}",
+                "advance": "${data.advance}",
+                "pay_amount": "${data.pay_amount}"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "INFO",
+      "title": "Booking",
+      "terminal": true,
+      "data": {
+        "info_text": { "type": "string", "__example__": "No slots available." }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "${data.info_text}"
+          },
+          {
+            "type": "Footer",
+            "label": "Close",
+            "on-click-action": {
+              "name": "complete",
+              "payload": { "status": "closed" }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

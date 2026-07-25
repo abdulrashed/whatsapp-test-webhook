@@ -70,6 +70,63 @@ export async function sendMainMenu(to, venueName, phoneNumberId) {
   );
 }
 
+// Sends a single call-to-action URL button (used to open the hosted Razorpay
+// checkout page). WhatsApp allows exactly one URL button per CTA message.
+export async function sendCtaUrl(to, bodyText, buttonText, url, phoneNumberId) {
+  return sendMessage(
+    {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "interactive",
+      interactive: {
+        type: "cta_url",
+        body: { text: bodyText },
+        action: {
+          name: "cta_url",
+          parameters: { display_text: buttonText, url }
+        }
+      }
+    },
+    phoneNumberId
+  );
+}
+
+// Sends an interactive Flow message that opens the booking Flow in-app. The
+// flow_token carries venue + user identity back to our endpoint; mode
+// "navigate" with our INIT-driven endpoint means Meta calls the endpoint for
+// the first screen. flowCta is the button label the customer taps.
+export async function sendFlowMessage(
+  to,
+  { flowId, flowToken, flowCta = "Book a Slot", bodyText, header },
+  phoneNumberId
+) {
+  return sendMessage(
+    {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "interactive",
+      interactive: {
+        type: "flow",
+        ...(header ? { header: { type: "text", text: header } } : {}),
+        body: { text: bodyText || "Tap below to book your slot." },
+        action: {
+          name: "flow",
+          parameters: {
+            flow_message_version: "3",
+            flow_token: flowToken,
+            flow_id: flowId,
+            flow_cta: flowCta,
+            flow_action: "data_exchange"
+          }
+        }
+      }
+    },
+    phoneNumberId
+  );
+}
+
 export async function sendTemplateHelloWorld(to, phoneNumberId) {
   return sendMessage(
     {
