@@ -3,6 +3,7 @@ node_modules/
 npm-debug.log*
 logs/
 .vercel/
+.vercel-cli/
 *.local
 Meta_WhatsApp_Current_Flow_Documentation.docx
 .DS_Store

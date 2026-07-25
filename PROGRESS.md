@@ -143,6 +143,76 @@ Real mobile WhatsApp message to the Meta test number did not create Vercel logs.
 
 This means Meta is not delivering real user message webhooks to the app yet, even though dashboard test webhooks reach Vercel.
 
+## Debug Findings - July 25, 2026
+
+- Production health check is live:
+
+```text
+https://whatsapp-test-webhook.vercel.app/health
+```
+
+- Production `/health` reports `phoneNumberIdConfigured: true`, `wabaIdConfigured: true`, and `signatureValidationEnabled: true`.
+- Vercel production deployment is live at commit:
+
+```text
+2693da89afefb895e5d824c1965caa0e41fdba65
+```
+
+- Recent Vercel logs showed `/health` and `/send-template` requests, but no real mobile-originating `/webhook` POST.
+- A correctly signed synthetic WhatsApp status webhook POST to production `/webhook` returned:
+
+```text
+200 EVENT_RECEIVED
+```
+
+- Vercel runtime logs confirmed the synthetic status event was processed:
+
+```text
+[info] Message status received
+```
+
+- Sending `hello_world` via production `/send-template` failed because Meta rejected `WHATSAPP_TOKEN`:
+
+```text
+OAuthException code 190: Authentication Error
+```
+
+- Testing the local `.env` token directly against Graph API showed the token expired on:
+
+```text
+Friday, July 24, 2026 15:00 PDT
+```
+
+- After the Meta setup was updated, the local `.env` token successfully read the test phone number:
+
+```text
++1 555-666-7628
+quality_rating: GREEN
+```
+
+- Production Vercel still rejected `/send-template` with:
+
+```text
+OAuthException code 190: Authentication Error
+```
+
+- Meta dashboard `messages` test reached Vercel again and logged the fake sender:
+
+```text
+from: 16315551181
+text: this is a text message
+```
+
+- The dashboard test then failed while trying to send the automatic reply:
+
+```text
+OAuthException code 190: Authentication Error
+```
+
+- `src/webhook-core.js` was hardened so reply-send failures are logged per message and do not make the webhook return a failed response to Meta.
+
+Conclusion: Vercel routing, signature validation, and the webhook handler are working. The immediate known broken item is the expired/stale Meta access token in Vercel Production. The remaining reason for missing real mobile webhooks, if replies still fail after the Vercel token is updated and redeployed, is likely in Meta app/test-recipient state rather than this deployed webhook route.
+
 Likely areas to check next:
 
 - Confirm the real mobile number is still added and verified as an allowed test recipient in Step 1. Try it out.

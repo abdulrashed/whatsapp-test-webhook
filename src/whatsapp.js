@@ -2,14 +2,15 @@ import axios from "axios";
 import { config, assertCanSendMessages } from "./config.js";
 import { logInfo } from "./logger.js";
 
-function messagesUrl() {
-  return `https://graph.facebook.com/${config.graphApiVersion}/${config.phoneNumberId}/messages`;
+function messagesUrl(phoneNumberId) {
+  return `https://graph.facebook.com/${config.graphApiVersion}/${phoneNumberId}/messages`;
 }
 
-async function sendMessage(payload) {
+async function sendMessage(payload, phoneNumberId) {
   assertCanSendMessages();
 
-  const response = await axios.post(messagesUrl(), payload, {
+  const senderId = phoneNumberId || config.phoneNumberId;
+  const response = await axios.post(messagesUrl(senderId), payload, {
     headers: {
       Authorization: `Bearer ${config.whatsappToken}`,
       "Content-Type": "application/json"
@@ -17,24 +18,27 @@ async function sendMessage(payload) {
     timeout: 15000
   });
 
-  logInfo("WhatsApp message sent", response.data);
+  logInfo("WhatsApp message sent", { senderId, ...response.data });
   return response.data;
 }
 
-export async function sendTextMessage(to, body) {
-  return sendMessage({
-    messaging_product: "whatsapp",
-    recipient_type: "individual",
-    to,
-    type: "text",
-    text: {
-      preview_url: false,
-      body
-    }
-  });
+export async function sendTextMessage(to, body, phoneNumberId) {
+  return sendMessage(
+    {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "text",
+      text: {
+        preview_url: false,
+        body
+      }
+    },
+    phoneNumberId
+  );
 }
 
-export async function sendBookingButtons(to) {
+export async function sendBookingButtons(to, phoneNumberId) {
   return sendMessage({
     messaging_product: "whatsapp",
     recipient_type: "individual",
@@ -71,19 +75,22 @@ export async function sendBookingButtons(to) {
         ]
       }
     }
-  });
+  }, phoneNumberId);
 }
 
-export async function sendTemplateHelloWorld(to) {
-  return sendMessage({
-    messaging_product: "whatsapp",
-    to,
-    type: "template",
-    template: {
-      name: "hello_world",
-      language: {
-        code: "en_US"
+export async function sendTemplateHelloWorld(to, phoneNumberId) {
+  return sendMessage(
+    {
+      messaging_product: "whatsapp",
+      to,
+      type: "template",
+      template: {
+        name: "hello_world",
+        language: {
+          code: "en_US"
+        }
       }
-    }
-  });
+    },
+    phoneNumberId
+  );
 }

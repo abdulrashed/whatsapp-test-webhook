@@ -2,7 +2,7 @@ import crypto from "crypto";
 
 import { config } from "./config.js";
 import { hasSeenEvent } from "./dedupe.js";
-import { logInfo, logWarn } from "./logger.js";
+import { logError, logInfo, logWarn } from "./logger.js";
 import { sendBookingButtons, sendTextMessage } from "./whatsapp.js";
 
 export function verifyWebhookQuery(query) {
@@ -68,6 +68,10 @@ export async function handleWebhookPayload(payload) {
 }
 
 async function handleMessagesChange(value) {
+  // The number that RECEIVED the message. The webhook is subscribed at WABA level,
+  // so this differs per inbound message when the account has multiple numbers.
+  const phoneNumberId = value.metadata?.phone_number_id;
+
   for (const status of value.statuses || []) {
     const statusEventId = `status:${status.id}:${status.status}`;
     if (hasSeenEvent(statusEventId)) {
@@ -92,6 +96,8 @@ async function handleMessagesChange(value) {
     const from = message.from;
     logInfo("Inbound WhatsApp message received", {
       from,
+      phoneNumberId,
+      displayPhoneNumber: value.metadata?.display_phone_number,
       type: message.type,
       id: message.id,
       text: message.text?.body,
@@ -99,52 +105,72 @@ async function handleMessagesChange(value) {
       buttonTitle: message.interactive?.button_reply?.title
     });
 
-    await respondToMessage(from, message);
+    try {
+      await respondToMessage(from, message, phoneNumberId);
+    } catch (error) {
+      logError("Failed to respond to inbound WhatsApp message", error);
+    }
   }
 }
 
-async function respondToMessage(from, message) {
+async function respondToMessage(from, message, phoneNumberId) {
   if (!from) {
     logWarn("Inbound message missing sender number");
     return;
   }
 
+  if (!phoneNumberId) {
+    logWarn("Inbound message missing metadata.phone_number_id, skipping reply", { from });
+    return;
+  }
+
   if (message.type === "interactive") {
-    await respondToButton(from, message.interactive?.button_reply?.id);
+    await respondToButton(from, message.interactive?.button_reply?.id, phoneNumberId);
     return;
   }
 
   if (message.type === "text") {
     await sendTextMessage(
       from,
-      "Welcome. This is the WhatsApp test booking flow. Please choose an option below."
+      "Welcome. This is the WhatsApp test booking flow. Please choose an option below.",
+      phoneNumberId
     );
-    await sendBookingButtons(from);
+    await sendBookingButtons(from, phoneNumberId);
     return;
   }
 
-  await sendTextMessage(from, "Thanks. Please use one of the booking options below.");
-  await sendBookingButtons(from);
+  await sendTextMessage(from, "Thanks. Please use one of the booking options below.", phoneNumberId);
+  await sendBookingButtons(from, phoneNumberId);
 }
 
-async function respondToButton(from, buttonId) {
+async function respondToButton(from, buttonId, phoneNumberId) {
   switch (buttonId) {
     case "book_turf":
       await sendTextMessage(
         from,
-        "Booking test selected. Next stage will connect court selection and live availability."
+        "Booking test selected. Next stage will connect court selection and live availability.",
+        phoneNumberId
       );
       break;
     case "view_slots":
       await sendTextMessage(
         from,
-        "Slot viewing test selected. Next stage will fetch available slots from the booking system."
+        "Slot viewing test selected. Next stage will fetch available slots from the booking system.",
+        phoneNumberId
       );
       break;
     case "contact_staff":
-      await sendTextMessage(from, "Staff contact test selected. A team member handoff can be added later.");
+      await sendTextMessage(
+        from,
+        "Staff contact test selected. A team member handoff can be added later.",
+        phoneNumberId
+      );
       break;
     default:
-      await sendTextMessage(from, "Button received. Please send Hi to restart the test flow.");
+      await sendTextMessage(
+        from,
+        "Button received. Please send Hi to restart the test flow.",
+        phoneNumberId
+      );
   }
 }
