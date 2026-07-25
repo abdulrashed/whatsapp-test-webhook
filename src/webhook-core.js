@@ -227,7 +227,8 @@ async function respondToButton(from, buttonId, phoneNumberId, venueName) {
       await setMode(from, "human", { phoneNumberId, lastHumanAt: Date.now() });
       await sendTextMessage(
         from,
-        `You're now connected to *${venueName}*. Please type your question and our team will get back to you shortly.\n\n` +
+        `✅ You're now connected with the *${venueName}* team!\n\n` +
+          "Go ahead and type your message — we'll get back to you as soon as we can. 💬\n\n" +
           "Type *menu* anytime to return to the main options.",
         phoneNumberId
       );

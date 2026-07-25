@@ -52,9 +52,9 @@ export async function sendMainMenu(to, venueName, phoneNumberId) {
         type: "button",
         body: {
           text:
-            `👋 Welcome to *${venueName}* — powered by GameOn!\n\n` +
-            "I can help you book a turf, check your bookings, or connect you with our team.\n\n" +
-            "What would you like to do?"
+            `👋 Welcome to *${venueName}*!\n\n` +
+            "Great to have you here. You can book a turf in seconds, check your existing bookings, or chat with our team.\n\n" +
+            "How can we help you today? 👇"
         },
         action: {
           // Max 3 reply buttons, titles capped at 20 characters by WhatsApp.
