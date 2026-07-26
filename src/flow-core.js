@@ -299,9 +299,12 @@ export async function handleFlowRequest(body) {
       case "SPORT":
         return dateScreen(venueId, acc);
       case "DATE": {
-        // Deselecting a chip fires this with an empty selection — redraw DATE
-        // rather than advancing with no date.
-        const date = normalizeDate(acc.date);
+        // ChipsSelector has no on-select-action, so DATE uses a Footer that
+        // submits all group fields; the chosen day is in whichever is non-empty.
+        // No selection (footer tapped early) → redraw DATE.
+        const raw = firstOf(acc.date_g1) || firstOf(acc.date_g2)
+          || firstOf(acc.date_g3) || firstOf(acc.date_g4);
+        const date = normalizeDate(raw);
         if (!date) return dateScreen(venueId, acc);
         return courtOrTimeScreen(venueId, { ...acc, date });
       }
