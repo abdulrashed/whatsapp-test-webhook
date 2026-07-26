@@ -20,30 +20,27 @@
           "items": {
             "type": "object",
             "properties": {
-              "id": { "type": "string" },
-              "title": { "type": "string" }
+              "main-content": { "type": "object" },
+              "on-click-action": { "type": "object" }
             }
           },
-          "__example__": [{ "id": "Football", "title": "Football" }]
+          "__example__": [
+            {
+              "main-content": { "title": "Football" },
+              "on-click-action": {
+                "name": "data_exchange",
+                "payload": { "sport_name": "Football" }
+              }
+            }
+          ]
         }
       },
       "layout": {
         "type": "SingleColumnLayout",
         "children": [
           {
-            "type": "RadioButtonsGroup",
-            "name": "sport",
-            "label": "Sport",
-            "required": true,
-            "data-source": "${data.sports}"
-          },
-          {
-            "type": "Footer",
-            "label": "Next",
-            "on-click-action": {
-              "name": "data_exchange",
-              "payload": { "sport_name": "${form.sport}" }
-            }
+            "type": "NavigationList",
+            "list-items": "${data.sports}"
           }
         ]
       }
@@ -169,32 +166,32 @@
           "items": {
             "type": "object",
             "properties": {
-              "id": { "type": "string" },
-              "title": { "type": "string" }
+              "main-content": { "type": "object" },
+              "on-click-action": { "type": "object" }
             }
           },
-          "__example__": [{ "id": "court1", "title": "Court 1" }]
-        },
-        "sport_name": { "type": "string", "__example__": "Football" },
-        "date": { "type": "string", "__example__": "2026-07-26" }
+          "__example__": [
+            {
+              "main-content": { "title": "Court 1" },
+              "on-click-action": {
+                "name": "data_exchange",
+                "payload": {
+                  "sport_name": "Football",
+                  "date": "2026-07-26",
+                  "court_id": "court1",
+                  "court_name": "Court 1"
+                }
+              }
+            }
+          ]
+        }
       },
       "layout": {
         "type": "SingleColumnLayout",
         "children": [
           {
-            "type": "RadioButtonsGroup",
-            "name": "court",
-            "label": "Court",
-            "required": false,
-            "data-source": "${data.courts}",
-            "on-select-action": {
-              "name": "data_exchange",
-              "payload": {
-                "sport_name": "${data.sport_name}",
-                "date": "${data.date}",
-                "court_id": "${form.court}"
-              }
-            }
+            "type": "NavigationList",
+            "list-items": "${data.courts}"
           }
         ]
       }
@@ -208,36 +205,33 @@
           "items": {
             "type": "object",
             "properties": {
-              "id": { "type": "string" },
-              "title": { "type": "string" }
+              "main-content": { "type": "object" },
+              "on-click-action": { "type": "object" }
             }
           },
-          "__example__": [{ "id": "06:00", "title": "6:00 AM" }]
-        },
-        "sport_name": { "type": "string", "__example__": "Football" },
-        "date": { "type": "string", "__example__": "2026-07-26" },
-        "court_id": { "type": "string", "__example__": "court1" },
-        "court_name": { "type": "string", "__example__": "Court 1" }
+          "__example__": [
+            {
+              "main-content": { "title": "6:00 AM" },
+              "on-click-action": {
+                "name": "data_exchange",
+                "payload": {
+                  "sport_name": "Football",
+                  "date": "2026-07-26",
+                  "court_id": "court1",
+                  "court_name": "Court 1",
+                  "start_time": "06:00"
+                }
+              }
+            }
+          ]
+        }
       },
       "layout": {
         "type": "SingleColumnLayout",
         "children": [
           {
-            "type": "RadioButtonsGroup",
-            "name": "start_time",
-            "label": "Start time",
-            "required": false,
-            "data-source": "${data.times}",
-            "on-select-action": {
-              "name": "data_exchange",
-              "payload": {
-                "sport_name": "${data.sport_name}",
-                "date": "${data.date}",
-                "court_id": "${data.court_id}",
-                "court_name": "${data.court_name}",
-                "start_time": "${form.start_time}"
-              }
-            }
+            "type": "NavigationList",
+            "list-items": "${data.times}"
           }
         ]
       }
@@ -251,42 +245,36 @@
           "items": {
             "type": "object",
             "properties": {
-              "id": { "type": "string" },
-              "title": { "type": "string" }
+              "main-content": { "type": "object" },
+              "end": { "type": "object" },
+              "on-click-action": { "type": "object" }
             }
           },
-          "__example__": [{ "id": "1", "title": "1 hour · ends 7:00 AM · ₹300" }]
-        },
-        "sport_name": { "type": "string", "__example__": "Football" },
-        "date": { "type": "string", "__example__": "2026-07-26" },
-        "court_id": { "type": "string", "__example__": "court1" },
-        "court_name": { "type": "string", "__example__": "Court 1" },
-        "start_time": { "type": "string", "__example__": "06:00" }
+          "__example__": [
+            {
+              "main-content": { "title": "1 hour", "metadata": "ends 7:00 AM" },
+              "end": { "title": "₹300" },
+              "on-click-action": {
+                "name": "data_exchange",
+                "payload": {
+                  "sport_name": "Football",
+                  "date": "2026-07-26",
+                  "court_id": "court1",
+                  "court_name": "Court 1",
+                  "start_time": "06:00",
+                  "duration": "1"
+                }
+              }
+            }
+          ]
+        }
       },
       "layout": {
         "type": "SingleColumnLayout",
         "children": [
           {
-            "type": "Dropdown",
-            "name": "duration",
-            "label": "Duration",
-            "required": true,
-            "data-source": "${data.durations}"
-          },
-          {
-            "type": "Footer",
-            "label": "Review",
-            "on-click-action": {
-              "name": "data_exchange",
-              "payload": {
-                "sport_name": "${data.sport_name}",
-                "date": "${data.date}",
-                "court_id": "${data.court_id}",
-                "court_name": "${data.court_name}",
-                "start_time": "${data.start_time}",
-                "duration": "${form.duration}"
-              }
-            }
+            "type": "NavigationList",
+            "list-items": "${data.durations}"
           }
         ]
       }

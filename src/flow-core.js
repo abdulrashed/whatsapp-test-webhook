@@ -80,18 +80,41 @@ function addMinutes(hhmm, minutes) {
 
 // ---- Screen builders --------------------------------------------------------
 
+// SPORT/COURT/TIME/DURATION render as NavigationList tiles that advance on a
+// single tap. ChipsSelector can't carry an on-select-action, but a
+// NavigationItem can carry its own on-click-action — and because the list is
+// built server-side we bake the exact next-screen payload into each tile. That
+// sidesteps needing a component-level "which item was tapped" reference.
+// Meta caps a NavigationList at 20 items (extras are dropped silently).
+const NAV_MAX_ITEMS = 20;
+
+function navItem(title, payload, { metadata, description, endTitle } = {}) {
+  const mainContent = { title: String(title).slice(0, 30) };
+  if (description) mainContent.description = String(description).slice(0, 20);
+  if (metadata) mainContent.metadata = String(metadata).slice(0, 80);
+  const item = {
+    "main-content": mainContent,
+    "on-click-action": { name: "data_exchange", payload }
+  };
+  if (endTitle) item.end = { title: String(endTitle).slice(0, 10) };
+  return item;
+}
+
 async function sportScreen(venueId) {
   const courts = await fetchCourtDetails(venueId);
-  const seen = new Map();
+  const seen = new Set();
+  const items = [];
   for (const c of courts) {
     for (const s of c.sports || []) {
       const name = s.sport_name || s.name;
-      if (name && !seen.has(name)) seen.set(name, { id: name, title: name });
+      if (name && !seen.has(name)) {
+        seen.add(name);
+        items.push(navItem(name, { sport_name: name }));
+      }
     }
   }
-  const sports = [...seen.values()];
-  if (!sports.length) return infoScreen("This venue has no sports configured yet.");
-  return { screen: "SPORT", data: { sports } };
+  if (!items.length) return infoScreen("This venue has no sports configured yet.");
+  return { screen: "SPORT", data: { sports: items.slice(0, NAV_MAX_ITEMS) } };
 }
 
 // Builds the open days as chip groups: one group per calendar month, split
@@ -160,9 +183,14 @@ async function courtOrTimeScreen(venueId, acc) {
   return {
     screen: "COURT",
     data: {
-      courts: active.map((c) => ({ id: c.id, title: c.name })),
-      sport_name: acc.sport_name,
-      date: acc.date
+      courts: active.slice(0, NAV_MAX_ITEMS).map((c) =>
+        navItem(c.name, {
+          sport_name: acc.sport_name,
+          date: acc.date,
+          court_id: c.id,
+          court_name: c.name
+        })
+      )
     }
   };
 }
@@ -182,11 +210,15 @@ async function timeScreen(venueId, acc) {
   return {
     screen: "TIME",
     data: {
-      times: times.map((t) => ({ id: t.slot_time, title: to12h(t.slot_time) })),
-      sport_name: acc.sport_name,
-      date: acc.date,
-      court_id: acc.court_id,
-      court_name: courtName
+      times: times.slice(0, NAV_MAX_ITEMS).map((t) =>
+        navItem(to12h(t.slot_time), {
+          sport_name: acc.sport_name,
+          date: acc.date,
+          court_id: acc.court_id,
+          court_name: courtName,
+          start_time: t.slot_time
+        })
+      )
     }
   };
 }
@@ -201,25 +233,25 @@ async function durationScreen(acc) {
     if (!ok) break; // once an hour is blocked, longer spans are too
     // eslint-disable-next-line no-await-in-loop
     const { price } = await priceForSpan(acc.court_id, acc.date, acc.start_time, end);
-    durations.push({
-      id: String(h),
-      title: `${h} hour${h > 1 ? "s" : ""} · ends ${to12h(end)} · ₹${price}`
-    });
+    durations.push(
+      navItem(
+        `${h} hour${h > 1 ? "s" : ""}`,
+        {
+          sport_name: acc.sport_name,
+          date: acc.date,
+          court_id: acc.court_id,
+          court_name: acc.court_name,
+          start_time: acc.start_time,
+          duration: String(h)
+        },
+        { metadata: `ends ${to12h(end)}`, endTitle: `₹${price}` }
+      )
+    );
   }
   if (!durations.length) {
     return infoScreen("That start time is no longer available. Please try another.");
   }
-  return {
-    screen: "DURATION",
-    data: {
-      durations,
-      sport_name: acc.sport_name,
-      date: acc.date,
-      court_id: acc.court_id,
-      court_name: acc.court_name,
-      start_time: acc.start_time
-    }
-  };
+  return { screen: "DURATION", data: { durations } };
 }
 
 async function summaryScreen(venue, acc) {
