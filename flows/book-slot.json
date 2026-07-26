@@ -29,7 +29,18 @@
                   "metadata": { "type": "string" }
                 }
               },
-              "on-click-action": { "type": "object" }
+              "on-click-action": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "payload": {
+                    "type": "object",
+                    "properties": {
+                      "sport_name": { "type": "string" }
+                    }
+                  }
+                }
+              }
             }
           },
           "__example__": [
@@ -185,7 +196,21 @@
                   "metadata": { "type": "string" }
                 }
               },
-              "on-click-action": { "type": "object" }
+              "on-click-action": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "payload": {
+                    "type": "object",
+                    "properties": {
+                      "sport_name": { "type": "string" },
+                      "date": { "type": "string" },
+                      "court_id": { "type": "string" },
+                      "court_name": { "type": "string" }
+                    }
+                  }
+                }
+              }
             }
           },
           "__example__": [
@@ -234,7 +259,22 @@
                   "metadata": { "type": "string" }
                 }
               },
-              "on-click-action": { "type": "object" }
+              "on-click-action": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "payload": {
+                    "type": "object",
+                    "properties": {
+                      "sport_name": { "type": "string" },
+                      "date": { "type": "string" },
+                      "court_id": { "type": "string" },
+                      "court_name": { "type": "string" },
+                      "start_time": { "type": "string" }
+                    }
+                  }
+                }
+              }
             }
           },
           "__example__": [
@@ -292,7 +332,23 @@
                   "metadata": { "type": "string" }
                 }
               },
-              "on-click-action": { "type": "object" }
+              "on-click-action": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "payload": {
+                    "type": "object",
+                    "properties": {
+                      "sport_name": { "type": "string" },
+                      "date": { "type": "string" },
+                      "court_id": { "type": "string" },
+                      "court_name": { "type": "string" },
+                      "start_time": { "type": "string" },
+                      "duration": { "type": "string" }
+                    }
+                  }
+                }
+              }
             }
           },
           "__example__": [
