@@ -21,7 +21,14 @@
             "type": "object",
             "properties": {
               "id": { "type": "string" },
-              "main-content": { "type": "object" },
+              "main-content": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string" },
+                  "description": { "type": "string" },
+                  "metadata": { "type": "string" }
+                }
+              },
               "on-click-action": { "type": "object" }
             }
           },
@@ -170,7 +177,14 @@
             "type": "object",
             "properties": {
               "id": { "type": "string" },
-              "main-content": { "type": "object" },
+              "main-content": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string" },
+                  "description": { "type": "string" },
+                  "metadata": { "type": "string" }
+                }
+              },
               "on-click-action": { "type": "object" }
             }
           },
@@ -212,7 +226,14 @@
             "type": "object",
             "properties": {
               "id": { "type": "string" },
-              "main-content": { "type": "object" },
+              "main-content": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string" },
+                  "description": { "type": "string" },
+                  "metadata": { "type": "string" }
+                }
+              },
               "on-click-action": { "type": "object" }
             }
           },
@@ -255,8 +276,22 @@
             "type": "object",
             "properties": {
               "id": { "type": "string" },
-              "main-content": { "type": "object" },
-              "end": { "type": "object" },
+              "main-content": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string" },
+                  "description": { "type": "string" },
+                  "metadata": { "type": "string" }
+                }
+              },
+              "end": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string" },
+                  "description": { "type": "string" },
+                  "metadata": { "type": "string" }
+                }
+              },
               "on-click-action": { "type": "object" }
             }
           },
