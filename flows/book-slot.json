@@ -52,29 +52,122 @@
       "id": "DATE",
       "title": "Select a date",
       "data": {
-        "min_date": { "type": "string", "__example__": "2026-07-26" },
-        "max_date": { "type": "string", "__example__": "2026-08-25" },
+        "g1_label": { "type": "string", "__example__": "July 2026" },
+        "g1_days": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" }
+            }
+          },
+          "__example__": [{ "id": "2026-07-26", "title": "26 Sun" }]
+        },
+        "g2_visible": { "type": "boolean", "__example__": true },
+        "g2_label": { "type": "string", "__example__": "August 2026" },
+        "g2_days": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" }
+            }
+          },
+          "__example__": [{ "id": "2026-08-01", "title": "1 Sat" }]
+        },
+        "g3_visible": { "type": "boolean", "__example__": false },
+        "g3_label": { "type": "string", "__example__": "" },
+        "g3_days": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" }
+            }
+          },
+          "__example__": []
+        },
+        "g4_visible": { "type": "boolean", "__example__": false },
+        "g4_label": { "type": "string", "__example__": "" },
+        "g4_days": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" }
+            }
+          },
+          "__example__": []
+        },
         "sport_name": { "type": "string", "__example__": "Football" }
       },
       "layout": {
         "type": "SingleColumnLayout",
         "children": [
           {
-            "type": "DatePicker",
-            "name": "date",
-            "label": "Date",
-            "required": true,
-            "min-date": "${data.min_date}",
-            "max-date": "${data.max_date}"
-          },
-          {
-            "type": "Footer",
-            "label": "Next",
-            "on-click-action": {
+            "type": "ChipsSelector",
+            "name": "date_g1",
+            "label": "${data.g1_label}",
+            "required": false,
+            "max-selected-items": 1,
+            "data-source": "${data.g1_days}",
+            "on-select-action": {
               "name": "data_exchange",
               "payload": {
                 "sport_name": "${data.sport_name}",
-                "date": "${form.date}"
+                "date": "${form.date_g1}"
+              }
+            }
+          },
+          {
+            "type": "ChipsSelector",
+            "name": "date_g2",
+            "label": "${data.g2_label}",
+            "visible": "${data.g2_visible}",
+            "required": false,
+            "max-selected-items": 1,
+            "data-source": "${data.g2_days}",
+            "on-select-action": {
+              "name": "data_exchange",
+              "payload": {
+                "sport_name": "${data.sport_name}",
+                "date": "${form.date_g2}"
+              }
+            }
+          },
+          {
+            "type": "ChipsSelector",
+            "name": "date_g3",
+            "label": "${data.g3_label}",
+            "visible": "${data.g3_visible}",
+            "required": false,
+            "max-selected-items": 1,
+            "data-source": "${data.g3_days}",
+            "on-select-action": {
+              "name": "data_exchange",
+              "payload": {
+                "sport_name": "${data.sport_name}",
+                "date": "${form.date_g3}"
+              }
+            }
+          },
+          {
+            "type": "ChipsSelector",
+            "name": "date_g4",
+            "label": "${data.g4_label}",
+            "visible": "${data.g4_visible}",
+            "required": false,
+            "max-selected-items": 1,
+            "data-source": "${data.g4_days}",
+            "on-select-action": {
+              "name": "data_exchange",
+              "payload": {
+                "sport_name": "${data.sport_name}",
+                "date": "${form.date_g4}"
               }
             }
           }
@@ -106,13 +199,9 @@
             "type": "RadioButtonsGroup",
             "name": "court",
             "label": "Court",
-            "required": true,
-            "data-source": "${data.courts}"
-          },
-          {
-            "type": "Footer",
-            "label": "Next",
-            "on-click-action": {
+            "required": false,
+            "data-source": "${data.courts}",
+            "on-select-action": {
               "name": "data_exchange",
               "payload": {
                 "sport_name": "${data.sport_name}",
@@ -151,13 +240,9 @@
             "type": "RadioButtonsGroup",
             "name": "start_time",
             "label": "Start time",
-            "required": true,
-            "data-source": "${data.times}"
-          },
-          {
-            "type": "Footer",
-            "label": "Next",
-            "on-click-action": {
+            "required": false,
+            "data-source": "${data.times}",
+            "on-select-action": {
               "name": "data_exchange",
               "payload": {
                 "sport_name": "${data.sport_name}",
@@ -244,6 +329,20 @@
             "text": "${data.summary_text}"
           },
           {
+            "type": "ChipsSelector",
+            "name": "pay_method",
+            "label": "Pay using",
+            "required": false,
+            "max-selected-items": 1,
+            "data-source": [
+              { "id": "gpay", "title": "GPay" },
+              { "id": "phonepe", "title": "PhonePe" },
+              { "id": "paytm", "title": "Paytm" },
+              { "id": "upi", "title": "Other UPI" },
+              { "id": "card", "title": "Card" }
+            ]
+          },
+          {
             "type": "Footer",
             "label": "Confirm & Pay",
             "on-click-action": {
@@ -257,7 +356,8 @@
                 "end_time": "${data.end_time}",
                 "price": "${data.price}",
                 "advance": "${data.advance}",
-                "pay_amount": "${data.pay_amount}"
+                "pay_amount": "${data.pay_amount}",
+                "pay_method": "${form.pay_method}"
               }
             }
           }

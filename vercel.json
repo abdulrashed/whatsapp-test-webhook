@@ -16,6 +16,10 @@
     {
       "source": "/flow",
       "destination": "/api/flow"
+    },
+    {
+      "source": "/payment-notify",
+      "destination": "/api/payment-notify"
     }
   ]
 }

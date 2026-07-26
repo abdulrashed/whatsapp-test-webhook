@@ -377,9 +377,17 @@ export async function createProcessingBooking({
   endTime,
   slotCost,
   finalAmount,
-  paidAmount
+  paidAmount,
+  waId,
+  waPhoneNumberId
 }) {
   const base = {
+    // The Razorpay webhook relay (/payment-notify) finds the booking by
+    // order_id and needs to know which WhatsApp number the chat came in on to
+    // reply from the right venue sender.
+    source: "whatsapp",
+    wa_id: waId || "",
+    wa_phone_number_id: waPhoneNumberId || "",
     booking_type: "processing",
     type: "single",
     status: "active",
@@ -463,6 +471,34 @@ export async function updateBookingOrderId(bookingId, orderId) {
   });
   const snap = await getDoc(ref);
   return { id: snap.id, ...snap.data() };
+}
+
+// The Razorpay order id is unique per booking, so this is the join key the
+// payment webhook relay uses. Skips the cross-date dummy (it shares the base
+// fields but is a "blocked" placeholder, not the booking the customer made).
+export async function fetchBookingByOrderId(orderId) {
+  try {
+    const snap = await getDocs(
+      query(collection(db, "bookings"), where("order_id", "==", String(orderId)), limit(5))
+    );
+    const match = snap.docs.map((d) => ({ id: d.id, ...d.data() })).find((b) => !b.is_dummy);
+    return match || null;
+  } catch (error) {
+    logError("fetchBookingByOrderId failed", { orderId, error: error?.message });
+    return null;
+  }
+}
+
+// Stamped once the WhatsApp confirmation goes out, so a retried Razorpay
+// webhook doesn't message the customer twice.
+export async function markConfirmationSent(bookingId) {
+  try {
+    await updateDoc(doc(db, "bookings", bookingId), {
+      wa_confirmation_sent_at: Timestamp.fromDate(new Date())
+    });
+  } catch (error) {
+    logError("markConfirmationSent failed", { bookingId, error: error?.message });
+  }
 }
 
 // ---------------------------------------------------------------------------

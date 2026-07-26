@@ -165,11 +165,87 @@ above. `/flow` requests and any decryption/handler errors show there.
 
 ---
 
+---
+
+## 8. Payment confirmation on WhatsApp (`/payment-notify`)
+
+Payment success is owned by the **Razorpay webhook** `v2_webhook_live.php`
+(finance, coupons, capture). It stays the single source of truth for money.
+The WhatsApp confirmation is a **separate** concern handled by this repo, so the
+PHP side does not need a second copy of the WhatsApp token or the venue → number
+mapping.
+
+**Flow of a paid booking:**
+
+1. The customer pays on the checkout page → Razorpay captures → calls
+   `v2_webhook_live.php` (unchanged).
+2. After it commits the capture, `v2_webhook_live.php` makes a fire-and-forget
+   `POST` to `https://<this-app>/payment-notify`.
+3. `/payment-notify` looks up the booking by `order_id`, confirms it is a
+   `source: "whatsapp"` booking, and sends the confirmation message from the
+   correct venue number (`wa_phone_number_id` stored on the booking). It marks
+   `wa_confirmation_sent_at` so a retried webhook can't double-send.
+
+Because the payment lands seconds after the customer messaged you, the 24-hour
+customer-service window is open and the confirmation is a **free-form** message
+— **no Meta template approval needed**. (A `booking_confirmed` template is only
+required later, for reminders or captures that arrive after 24h.)
+
+**Set `PAYMENT_NOTIFY_SECRET`** (see `.env.example`) to a long random value in
+this app's Vercel env **and** in the PHP config.
+
+**Request contract:**
+
+```
+POST /payment-notify
+Content-Type: application/json
+x-gameon-signature: sha256=<hex HMAC-SHA256 of the raw body, keyed with PAYMENT_NOTIFY_SECRET>
+
+{ "order_id": "order_XXXX", "status": "captured", "payment_id": "pay_XXXX" }
+```
+
+PHP side (add to `v2_webhook_live.php` after the capture is committed):
+
+```php
+$body = json_encode(["order_id" => $orderId, "status" => "captured", "payment_id" => $paymentId]);
+$sig  = "sha256=" . hash_hmac("sha256", $body, $PAYMENT_NOTIFY_SECRET);
+$ch = curl_init("https://<this-app>/payment-notify");
+curl_setopt_array($ch, [
+  CURLOPT_POST => true,
+  CURLOPT_HTTPHEADER => ["Content-Type: application/json", "x-gameon-signature: $sig"],
+  CURLOPT_POSTFIELDS => $body,
+  CURLOPT_RETURNTRANSFER => true,
+  CURLOPT_TIMEOUT => 5,
+]);
+curl_exec($ch); // ignore result — must never fail the payment
+curl_close($ch);
+```
+
+The endpoint returns `200 {ok:true,...}` on success and on any *internal* skip
+(booking not found, not a WhatsApp booking, already sent) so Razorpay never
+retries for a messaging problem. It returns `401` only for a bad/missing
+signature and `400` for malformed input.
+
+**Payment-method preference:** the SUMMARY screen's *Pay using* chip
+(GPay / PhonePe / Paytm / Other UPI / Card) rides through to the checkout URL as
+`prefer=upi&upi_app=google_pay` (or `prefer=card`). `v2_checkout_live.html`
+should read `upi_app` / `prefer` and preselect that method/app in Razorpay
+Checkout. A Flow cannot launch the payment app itself, so this is a preselection
+hint, not a deep link.
+
+---
+
 ## What is NOT set up by this guide
 
 - **My Bookings** list (data function exists; UI not built).
-- **Booking confirmation** WhatsApp message after payment — needs a
-  `booking_confirmed` template approved in Meta, plus a trigger added to the
-  Razorpay webhook `v2_webhook_live.php`.
+- **`booking_confirmed` template** — only needed for confirmations sent >24h
+  after the last customer message (reminders, delayed captures). The immediate
+  post-payment confirmation is handled free-form by `/payment-notify` (§8).
+- **Stale-booking sweep** — a booking whose payment never captures stays
+  `processing`. A cron/lazy sweep to cancel it and notify the customer is not
+  built.
+- **`v2_checkout_live.html` / `v2_webhook_live.php` edits** — the two external
+  PHP changes above (honour `upi_app`/`prefer`; POST to `/payment-notify`) live
+  in the GameOn PHP backend, not this repo.
 - **Coexistence** (Business app + API on the same number) — only relevant for
   the real Legend Arena number, not this test number. See the project plan.

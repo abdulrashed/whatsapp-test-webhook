@@ -361,7 +361,9 @@ async function handleFlowCompletion(from, nfmReply, phoneNumberId) {
     endTime: payload.end_time,
     slotCost: price,
     finalAmount: price,
-    paidAmount: payAmount
+    paidAmount: payAmount,
+    waId: from,
+    waPhoneNumberId: phoneNumberId
   });
 
   const order = await createOrder(payAmount);
@@ -380,7 +382,8 @@ async function handleFlowCompletion(from, nfmReply, phoneNumberId) {
     amount: order.amount,
     currency: order.currency || "INR",
     name: user.name,
-    contact: userId
+    contact: userId,
+    payMethod: payload.pay_method
   });
 
   await sendCtaUrl(

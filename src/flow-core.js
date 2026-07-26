@@ -19,6 +19,22 @@ import { logInfo, logWarn } from "./logger.js";
 
 const MAX_DURATION_HOURS = 8;
 
+// Meta caps a ChipsSelector at 20 options, and Flow JSON cannot repeat a
+// component over an array — so DATE declares a fixed number of chip groups and
+// hides the unused ones. Chips are grouped by calendar month and each month is
+// chunked at 20, so a month costs at most 2 groups. A window of <= 31 days
+// touches at most 2 months, which fits the 4 declared groups; longer windows
+// are clamped rather than silently dropping dates.
+const CHIPS_PER_GROUP = 20;
+const DATE_CHIP_GROUPS = 4;
+const MAX_BOOKING_DAYS = 31;
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 export function buildFlowToken(venueId, waId) {
   return `v1|${venueId}|${waId}`;
 }
@@ -34,11 +50,22 @@ function dateStr(d) {
   ).padStart(2, "0")}`;
 }
 
-// Meta's DatePicker submits the selected date as epoch-millis (string). Older
-// configs may pass "YYYY-MM-DD" — accept both.
+// ChipsSelector is multi-select by nature, so ${form.<name>} arrives as an
+// array even with max-selected-items: 1. Deselecting a chip fires the same
+// on-select-action with an empty array, which callers treat as "no choice yet".
+function firstOf(value) {
+  if (Array.isArray(value)) return value.length ? value[0] : null;
+  if (value === "" || value == null) return null;
+  return value;
+}
+
+// DATE chips submit "YYYY-MM-DD" directly. The older DatePicker submitted
+// epoch-millis (string) — still accepted so an in-flight Flow version keeps
+// working after a redeploy.
 function normalizeDate(value) {
-  if (value == null) return null;
-  const s = String(value);
+  const raw = firstOf(value);
+  if (raw == null) return null;
+  const s = String(raw);
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
   const ms = Number(s);
   if (!Number.isNaN(ms)) return dateStr(new Date(ms));
@@ -67,19 +94,59 @@ async function sportScreen(venueId) {
   return { screen: "SPORT", data: { sports } };
 }
 
+// Builds the open days as chip groups: one group per calendar month, split
+// again whenever a month exceeds CHIPS_PER_GROUP. Only the first chunk of a
+// month carries the month heading so a split month still reads as one block.
+function buildDateChipGroups(daysCount) {
+  const span = Math.min(Math.max(Number(daysCount) || 30, 1), MAX_BOOKING_DAYS);
+  const byMonth = [];
+  const cursor = new Date();
+  cursor.setHours(0, 0, 0, 0);
+
+  for (let i = 0; i < span; i++) {
+    const key = `${cursor.getFullYear()}-${cursor.getMonth()}`;
+    if (!byMonth.length || byMonth[byMonth.length - 1].key !== key) {
+      byMonth.push({
+        key,
+        label: `${MONTH_NAMES[cursor.getMonth()]} ${cursor.getFullYear()}`,
+        days: []
+      });
+    }
+    byMonth[byMonth.length - 1].days.push({
+      id: dateStr(cursor),
+      title: `${cursor.getDate()} ${WEEKDAY_NAMES[cursor.getDay()]}`
+    });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  const groups = [];
+  for (const month of byMonth) {
+    for (let i = 0; i < month.days.length; i += CHIPS_PER_GROUP) {
+      groups.push({
+        // Continuation chunks repeat no heading; the chips read as one month.
+        label: i === 0 ? month.label : " ",
+        days: month.days.slice(i, i + CHIPS_PER_GROUP)
+      });
+    }
+  }
+  return groups.slice(0, DATE_CHIP_GROUPS);
+}
+
 async function dateScreen(venueId, acc) {
   const venue = await fetchVenueDetails(venueId);
-  const today = new Date();
-  const max = new Date();
-  max.setDate(max.getDate() + (Number(venue?.days_count) || 30));
-  return {
-    screen: "DATE",
-    data: {
-      min_date: dateStr(today),
-      max_date: dateStr(max),
-      sport_name: acc.sport_name
-    }
-  };
+  const groups = buildDateChipGroups(venue?.days_count);
+  if (!groups.length) return infoScreen("This venue isn't open for booking right now.");
+
+  const data = { sport_name: acc.sport_name };
+  for (let i = 0; i < DATE_CHIP_GROUPS; i++) {
+    const group = groups[i];
+    const n = i + 1;
+    data[`g${n}_label`] = group?.label || " ";
+    data[`g${n}_days`] = group?.days || [];
+    // g1 is always rendered; the rest are hidden when unused.
+    if (n > 1) data[`g${n}_visible`] = Boolean(group);
+  }
+  return { screen: "DATE", data };
 }
 
 async function courtOrTimeScreen(venueId, acc) {
@@ -231,12 +298,23 @@ export async function handleFlowRequest(body) {
     switch (screen) {
       case "SPORT":
         return dateScreen(venueId, acc);
-      case "DATE":
-        return courtOrTimeScreen(venueId, { ...acc, date: normalizeDate(acc.date) });
-      case "COURT":
-        return timeScreen(venueId, acc);
-      case "TIME":
-        return durationScreen(acc);
+      case "DATE": {
+        // Deselecting a chip fires this with an empty selection — redraw DATE
+        // rather than advancing with no date.
+        const date = normalizeDate(acc.date);
+        if (!date) return dateScreen(venueId, acc);
+        return courtOrTimeScreen(venueId, { ...acc, date });
+      }
+      case "COURT": {
+        const courtId = firstOf(acc.court_id);
+        if (!courtId) return courtOrTimeScreen(venueId, acc);
+        return timeScreen(venueId, { ...acc, court_id: courtId });
+      }
+      case "TIME": {
+        const startTime = firstOf(acc.start_time);
+        if (!startTime) return timeScreen(venueId, acc);
+        return durationScreen({ ...acc, start_time: startTime });
+      }
       case "DURATION":
         return summaryScreen(await fetchVenueDetails(venueId), acc);
       default:

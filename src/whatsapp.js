@@ -92,6 +92,33 @@ export async function sendCtaUrl(to, bodyText, buttonText, url, phoneNumberId) {
   );
 }
 
+// Confirmation copy, kept pure so it can be reused as the body parameter of an
+// approved template later without touching the transport.
+export function buildBookingConfirmationText(booking) {
+  const paid = Number(booking.paid_amount) || 0;
+  const total = Number(booking.final_amount) || 0;
+  const balance = Math.max(total - paid, 0);
+  return (
+    `✅ *Booking confirmed!*\n\n` +
+    `🏟️ ${booking.venue_name || "Venue"} · ${booking.court_name || "Court"}\n` +
+    `🎾 ${booking.sport?.name || ""}\n` +
+    `📅 ${booking.date}\n` +
+    `⏰ ${booking.start_time} – ${booking.end_time}\n` +
+    `💳 Paid ₹${paid}` +
+    (balance > 0 ? `\n💵 Balance ₹${balance} payable at the venue` : "") +
+    (booking.venue_contact ? `\n\n📞 ${booking.venue_contact}` : "") +
+    `\n\nSee you on the turf! 🎉`
+  );
+}
+
+// Sent by the Razorpay webhook relay moments after capture, so the 24-hour
+// customer-service window is still open and a free-form message is allowed —
+// no approved template needed. Swap sendTextMessage for a template send here
+// if confirmations ever have to go out later than that.
+export async function sendBookingConfirmation(to, booking, phoneNumberId) {
+  return sendTextMessage(to, buildBookingConfirmationText(booking), phoneNumberId);
+}
+
 // Sends an interactive Flow message that opens the booking Flow in-app. The
 // flow_token carries venue + user identity back to our endpoint; mode
 // "navigate" with our INIT-driven endpoint means Meta calls the endpoint for

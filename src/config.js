@@ -43,6 +43,10 @@ export const config = {
     process.env.CHECKOUT_BASE_URL || "https://eleganzainfotech.com/v2_checkout_live.html",
   createOrderUrl:
     process.env.CREATE_ORDER_URL || "https://eleganzainfotech.com/v2_create_order_live.php",
+  // Shared secret v2_webhook_live.php presents on /payment-notify. The webhook
+  // stays the authority on money; this endpoint only sends the WhatsApp
+  // confirmation. Empty means the endpoint refuses every request.
+  paymentNotifySecret: process.env.PAYMENT_NOTIFY_SECRET || "",
   // Firebase Web config for the GameOn project (turf-app-930c5). These are
   // public client identifiers (already shipped in the app bundle), not secrets;
   // env vars let a different project be pointed at without a code change.
