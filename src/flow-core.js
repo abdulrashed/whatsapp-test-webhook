@@ -88,11 +88,12 @@ function addMinutes(hhmm, minutes) {
 // Meta caps a NavigationList at 20 items (extras are dropped silently).
 const NAV_MAX_ITEMS = 20;
 
-function navItem(title, payload, { metadata, description, endTitle } = {}) {
+function navItem(id, title, payload, { metadata, description, endTitle } = {}) {
   const mainContent = { title: String(title).slice(0, 30) };
   if (description) mainContent.description = String(description).slice(0, 20);
   if (metadata) mainContent.metadata = String(metadata).slice(0, 80);
   const item = {
+    id: String(id),
     "main-content": mainContent,
     "on-click-action": { name: "data_exchange", payload }
   };
@@ -109,7 +110,7 @@ async function sportScreen(venueId) {
       const name = s.sport_name || s.name;
       if (name && !seen.has(name)) {
         seen.add(name);
-        items.push(navItem(name, { sport_name: name }));
+        items.push(navItem(name, name, { sport_name: name }));
       }
     }
   }
@@ -184,7 +185,7 @@ async function courtOrTimeScreen(venueId, acc) {
     screen: "COURT",
     data: {
       courts: active.slice(0, NAV_MAX_ITEMS).map((c) =>
-        navItem(c.name, {
+        navItem(c.id, c.name, {
           sport_name: acc.sport_name,
           date: acc.date,
           court_id: c.id,
@@ -211,7 +212,7 @@ async function timeScreen(venueId, acc) {
     screen: "TIME",
     data: {
       times: times.slice(0, NAV_MAX_ITEMS).map((t) =>
-        navItem(to12h(t.slot_time), {
+        navItem(t.slot_time, to12h(t.slot_time), {
           sport_name: acc.sport_name,
           date: acc.date,
           court_id: acc.court_id,
@@ -235,6 +236,7 @@ async function durationScreen(acc) {
     const { price } = await priceForSpan(acc.court_id, acc.date, acc.start_time, end);
     durations.push(
       navItem(
+        String(h),
         `${h} hour${h > 1 ? "s" : ""}`,
         {
           sport_name: acc.sport_name,

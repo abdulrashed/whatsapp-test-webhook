@@ -20,12 +20,14 @@
           "items": {
             "type": "object",
             "properties": {
+              "id": { "type": "string" },
               "main-content": { "type": "object" },
               "on-click-action": { "type": "object" }
             }
           },
           "__example__": [
             {
+              "id": "Football",
               "main-content": { "title": "Football" },
               "on-click-action": {
                 "name": "data_exchange",
@@ -167,12 +169,14 @@
           "items": {
             "type": "object",
             "properties": {
+              "id": { "type": "string" },
               "main-content": { "type": "object" },
               "on-click-action": { "type": "object" }
             }
           },
           "__example__": [
             {
+              "id": "court1",
               "main-content": { "title": "Court 1" },
               "on-click-action": {
                 "name": "data_exchange",
@@ -207,12 +211,14 @@
           "items": {
             "type": "object",
             "properties": {
+              "id": { "type": "string" },
               "main-content": { "type": "object" },
               "on-click-action": { "type": "object" }
             }
           },
           "__example__": [
             {
+              "id": "06:00",
               "main-content": { "title": "6:00 AM" },
               "on-click-action": {
                 "name": "data_exchange",
@@ -248,6 +254,7 @@
           "items": {
             "type": "object",
             "properties": {
+              "id": { "type": "string" },
               "main-content": { "type": "object" },
               "end": { "type": "object" },
               "on-click-action": { "type": "object" }
@@ -255,6 +262,7 @@
           },
           "__example__": [
             {
+              "id": "1",
               "main-content": { "title": "1 hour", "metadata": "ends 7:00 AM" },
               "end": { "title": "₹300" },
               "on-click-action": {
