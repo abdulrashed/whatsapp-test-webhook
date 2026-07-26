@@ -8,14 +8,18 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { to } = req.body || {};
+    const { to, phoneNumberId, from } = req.body || {};
     if (!to) {
       res.status(400).json({ error: "Missing required body field: to" });
       return;
     }
 
-    const result = await sendTemplateHelloWorld(to);
-    res.status(200).json(result);
+    // Optional: choose which of your numbers sends. Falls back to the
+    // configured WHATSAPP_PHONE_NUMBER_ID when omitted.
+    const senderId = phoneNumberId || from;
+
+    const result = await sendTemplateHelloWorld(to, senderId);
+    res.status(200).json({ senderId: senderId || "default (WHATSAPP_PHONE_NUMBER_ID)", ...result });
   } catch (error) {
     res.status(error.response?.status || 500).json({
       error: "Request failed",
