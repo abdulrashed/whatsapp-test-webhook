@@ -235,7 +235,9 @@ async function respondToButton(from, buttonId, phoneNumberId, venueName, venueId
             flowToken: buildFlowToken(venueId, from),
             flowCta: "Book a Slot",
             header: venueName,
-            bodyText: "Let's get your slot booked. Tap below to pick your sport, date and time. ⚡"
+            bodyText:
+              "Great choice! 🏟️ Let's get your game booked.\n\n" +
+              "Tap *Book a Slot* below to choose your sport, date and time — it only takes a minute. ⚡"
           },
           phoneNumberId
         );

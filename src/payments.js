@@ -16,7 +16,14 @@ export async function createOrder(amountRupees) {
       { amount: amountRupees },
       { headers: { "Content-Type": "application/json" }, timeout: 15000 }
     );
-    return response.data;
+    // The PHP endpoint wraps the Razorpay order: { success, order: { id, ... } }.
+    // Mirror the app (paymentSummary.tsx): gate on `success`, return `order`.
+    const data = response.data;
+    if (!data?.success || !data.order?.id) {
+      logError("createOrder returned no order", { amountRupees, data });
+      return null;
+    }
+    return data.order;
   } catch (error) {
     logError("createOrder failed", {
       amountRupees,
