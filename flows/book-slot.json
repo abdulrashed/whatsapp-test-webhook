@@ -40,6 +40,7 @@
         "children": [
           {
             "type": "NavigationList",
+            "name": "sport_list",
             "list-items": "${data.sports}"
           }
         ]
@@ -191,6 +192,7 @@
         "children": [
           {
             "type": "NavigationList",
+            "name": "court_list",
             "list-items": "${data.courts}"
           }
         ]
@@ -231,6 +233,7 @@
         "children": [
           {
             "type": "NavigationList",
+            "name": "time_list",
             "list-items": "${data.times}"
           }
         ]
@@ -274,6 +277,7 @@
         "children": [
           {
             "type": "NavigationList",
+            "name": "duration_list",
             "list-items": "${data.durations}"
           }
         ]
