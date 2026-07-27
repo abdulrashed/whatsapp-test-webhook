@@ -80,10 +80,12 @@ function addMinutes(hhmm, minutes) {
 
 // ---- Screen builders --------------------------------------------------------
 
-// Every selection screen renders as ChipsSelector. Chips can't carry an
-// on-select-action, so each screen pairs its chips with a "Next" Footer that
-// submits the form value(s). Meta caps a ChipsSelector at CHIPS_PER_GROUP
-// options, so long lists (dates, time slots) are split across labelled groups.
+// Every selection screen renders as ChipsSelector carrying an on-select-action,
+// so one tap both records the choice and advances — no screen has a "Next"
+// footer, which also makes every selection mandatory (there is no other way
+// forward). on-select-action on chips needs Flow JSON >= 7.1. Meta caps a
+// ChipsSelector at CHIPS_PER_GROUP options, so long lists (dates, time slots)
+// are split across labelled groups.
 async function sportScreen(venueId) {
   const courts = await fetchCourtDetails(venueId);
   const seen = new Map();
@@ -216,7 +218,8 @@ async function durationScreen(acc) {
     const { price } = await priceForSpan(acc.court_id, acc.date, acc.start_time, end);
     durations.push({
       id: String(h),
-      title: `${h} hour${h > 1 ? "s" : ""} · ends ${to12h(end)} · ₹${price}`
+      // Kept short so it reads as a chip rather than wrapping to a full row.
+      title: `${h}h · till ${to12hShort(end)} · ₹${price}`
     });
   }
   if (!durations.length) {
@@ -279,6 +282,11 @@ function to12h(hhmm) {
   return `${h12}:${String(m).padStart(2, "0")} ${period}`;
 }
 
+// Same clock, minus a ":00" that buys nothing on a chip: "8 AM", "8:30 AM".
+function to12hShort(hhmm) {
+  return to12h(hhmm).replace(":00", "");
+}
+
 // ---- Router -----------------------------------------------------------------
 
 export async function handleFlowRequest(body) {
@@ -309,25 +317,22 @@ export async function handleFlowRequest(body) {
 
   if (action === "data_exchange") {
     switch (screen) {
-      // The guards below are belt-and-braces: these screens use a
-      // RadioButtonsGroup whose on-select-action only fires on a selection, so
-      // an empty value shouldn't reach us. They must not re-return their own
-      // screen — Meta rejects a routing model where a screen routes to itself.
+      // The guards below are belt-and-braces: every screen advances from an
+      // on-select-action, so a request only arrives once something is selected.
+      // They must not re-return their own screen — Meta rejects a routing model
+      // where a screen routes to itself ("Loop detected in the routing model").
       case "SPORT": {
         const sportName = firstOf(acc.sport_name);
         if (!sportName) return infoScreen("Please pick a sport to continue.");
         return dateScreen(venueId, { ...acc, sport_name: sportName });
       }
       case "DATE": {
-        // ChipsSelector has no on-select-action, so DATE uses a Footer that
-        // submits all group fields; the chosen day is in whichever is non-empty.
+        // Each month group is its own ChipsSelector and fires independently, so
+        // only the tapped group's field is present in the payload.
         const raw = firstOf(acc.date_g1) || firstOf(acc.date_g2)
           || firstOf(acc.date_g3) || firstOf(acc.date_g4);
-        // Tapping Next with nothing selected can't redraw DATE — Meta rejects a
-        // screen that routes to itself ("Loop detected in the routing model").
-        // Fall back to today, the first chip on the screen, so the customer
-        // still lands somewhere sensible and can go Back to change it.
-        const date = normalizeDate(raw) || dateStr(new Date());
+        const date = normalizeDate(raw);
+        if (!date) return infoScreen("Please pick a date to continue.");
         return courtOrTimeScreen(venueId, { ...acc, date });
       }
       case "COURT": {
