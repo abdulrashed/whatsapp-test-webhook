@@ -99,7 +99,10 @@
               "title": { "type": "string" }
             }
           },
-          "__example__": []
+          "__example__": [
+            { "id": "__unused_1", "title": "—" },
+            { "id": "__unused_2", "title": "—" }
+          ]
         },
         "g4_visible": { "type": "boolean", "__example__": false },
         "g4_label": { "type": "string", "__example__": " " },
@@ -112,7 +115,10 @@
               "title": { "type": "string" }
             }
           },
-          "__example__": []
+          "__example__": [
+            { "id": "__unused_1", "title": "—" },
+            { "id": "__unused_2", "title": "—" }
+          ]
         },
         "sport_name": { "type": "string", "__example__": "Football" }
       },
@@ -123,7 +129,7 @@
             "type": "ChipsSelector",
             "name": "date_g1",
             "label": "${data.g1_label}",
-            "required": true,
+            "required": false,
             "max-selected-items": 1,
             "data-source": "${data.g1_days}",
             "on-select-action": {
@@ -258,7 +264,10 @@
               "title": { "type": "string" }
             }
           },
-          "__example__": []
+          "__example__": [
+            { "id": "__unused_1", "title": "—" },
+            { "id": "__unused_2", "title": "—" }
+          ]
         },
         "am_label": { "type": "string", "__example__": "Start time" },
         "pm_label": { "type": "string", "__example__": " " },

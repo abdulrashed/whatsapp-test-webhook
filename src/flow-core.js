@@ -34,6 +34,15 @@ const MAX_BOOKING_DAYS = 31;
 // one chip. Where a screen has only one real choice there is nothing to decide,
 // and it is skipped outright.
 const MIN_CHIPS_PER_GROUP = 2;
+
+// The rule holds even for a group hidden by `visible: false` — an empty chip
+// group leaves the whole screen's form invalid, and an invalid form silently
+// blocks every on-select-action on it, so nothing navigates. Unused slots get
+// filler that is never rendered and never matches a real id.
+const UNUSED_CHIPS = [
+  { id: "__unused_1", title: "—" },
+  { id: "__unused_2", title: "—" }
+];
 const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const MONTH_NAMES = [
@@ -192,7 +201,7 @@ async function dateScreen(venueId, acc) {
     const group = groups[i];
     const n = i + 1;
     data[`g${n}_label`] = group?.label || " ";
-    data[`g${n}_days`] = group?.days || [];
+    data[`g${n}_days`] = group?.days || UNUSED_CHIPS;
     // g1 is always rendered; the rest are hidden when unused.
     if (n > 1) data[`g${n}_visible`] = Boolean(group);
   }
@@ -239,7 +248,7 @@ async function timeScreen(venueId, acc) {
     screen: "TIME",
     data: {
       times_am: first.items,
-      times_pm: second?.items || [],
+      times_pm: second?.items || UNUSED_CHIPS,
       am_label: first.label,
       pm_label: second?.label || " ",
       am_visible: true,
