@@ -459,6 +459,12 @@ export async function handleFlowRequest(body) {
   }
 
   if (action === "data_exchange") {
+    // The exact payload Meta built from the screen's on-select-action. A chip tap
+    // that lands here with its own field empty means the selection never made it
+    // into the payload, which looks identical from the outside to a stale
+    // published Flow version — this line is what tells the two apart.
+    logInfo("Flow data_exchange", { screen, payload: data || null });
+
     switch (screen) {
       // The guards below are belt-and-braces: every screen advances from an
       // on-select-action, so a request only arrives once something is selected.
