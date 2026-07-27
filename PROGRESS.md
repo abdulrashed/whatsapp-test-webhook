@@ -49,10 +49,15 @@ See [FLOW_SETUP.md](FLOW_SETUP.md) for the exact commands.
   "Something went wrong".
 - A Flow screen may never route to itself — Meta rejects it as a routing loop.
 - One invalid component blocks every action on its screen, even when hidden.
-- Every selection is a `ChipsSelector`, but navigation stays on a `Next` footer.
-  An earlier version navigated from `on-select-action` instead and had to be
-  abandoned — a form Flows consider invalid swallows that action silently, so a
-  single bad component froze the screen with no way forward.
+- Every selection is a `ChipsSelector`. SPORT and DATE advance on tap
+  (`on-select-action`); COURT/TIME/DURATION still use a `Next` footer.
+- **Never mark a chip group `required` on a screen that advances on tap.** A
+  required-but-empty field makes the form invalid, and Flows silently swallow
+  `on-select-action` on an invalid form. Only one date is ever picked, so with
+  several required groups the rest stay empty, the form can never become valid,
+  and the whole screen stops responding. This is what froze DATE before, not
+  the chips themselves — an earlier comment in this repo claimed the form only
+  had to be "satisfiable", which is wrong.
 - A `ChipsSelector` needs 2–20 options at runtime, not just in preview. Hence
   the endpoint skipping a screen whose list has one entry (single-sport venue,
   single court, one free slot), capping at 20, and padding hidden groups.
@@ -60,7 +65,9 @@ See [FLOW_SETUP.md](FLOW_SETUP.md) for the exact commands.
   the value goes downstream.
 - Chips-per-row is not settable; a wide label is what puts a duration on its own
   row. Shortening those titles silently repacks them two-up.
-- DATE splits its window across two groups, and only one may be `required` — a
-  required group blocks the footer for anyone choosing from the other, so a
-  split window leaves both optional and lets the endpoint reject an empty
-  submit.
+- DATE declares 4 fixed chip groups (Flow JSON cannot repeat a component over
+  an array), one per calendar month and chunked at 20, with the window clamped
+  to 31 days so it never needs a fifth. Unused groups are hidden and padded.
+- Deselecting a chip fires the same `on-select-action` with an empty array, so
+  the endpoint treats it as "nothing picked" and answers with INFO. A screen
+  cannot re-render itself — Meta rejects a self-route as a loop.

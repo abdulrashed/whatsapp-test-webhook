@@ -19,19 +19,22 @@ import { logInfo, logWarn } from "./logger.js";
 
 const MAX_DURATION_HOURS = 8;
 
-// SPORT renders its options as a ChipsSelector, which Meta will only draw with
-// 2 to 20 options — fewer and it reports "dataSource array must contain at
-// least 2 options", more and it draws nothing at all.
+// Every selection is a ChipsSelector, which Meta will only draw with 2 to 20
+// options — fewer and it reports "dataSource array must contain at least 2
+// options", more and it draws nothing at all.
 const MIN_CHIPS = 2;
 const MAX_CHIPS = 20;
 
-// DATE lays the booking window out as chips over two groups at most, so the
-// window is clamped to what those can hold.
-const MAX_BOOKING_DAYS = MAX_CHIPS * 2;
+// DATE groups its chips by calendar month, splitting again where a month
+// outgrows a selector. A window of <= 31 days touches at most two months, so it
+// needs at most four groups; longer windows are clamped rather than dropping
+// dates silently.
+const DATE_CHIP_GROUPS = 4;
+const MAX_BOOKING_DAYS = 31;
 
 // A group hidden by `visible: false` still has to hold MIN_CHIPS — an empty
-// data-source leaves the screen's form invalid, and an invalid form blocks the
-// footer. Filler that never renders and never matches a real date.
+// data-source leaves the screen's form invalid, and an invalid form swallows
+// every tap on the screen. Filler that never renders and never matches a date.
 const UNUSED_CHIPS = [
   { id: "__unused_1", title: "—" },
   { id: "__unused_2", title: "—" }
@@ -106,10 +109,8 @@ async function sportScreen(venueId) {
   return { screen: "SPORT", data: { sports: sports.slice(0, MAX_CHIPS) } };
 }
 
-// The venue's booking window as chips: today plus days_count - 1, in one group
-// where it fits and two even halves where it does not. Two is enough for the
-// 40-day clamp, and an even split never leaves a chunk below MIN_CHIPS the way
-// "20 then the remainder" would.
+// The venue's booking window as chips, one group per calendar month, split
+// again when a month outgrows a selector.
 function buildDateChipGroups(daysCount) {
   const wanted = Math.max(Number(daysCount) || 30, 1);
   const span = Math.min(wanted, MAX_BOOKING_DAYS);
@@ -119,26 +120,51 @@ function buildDateChipGroups(daysCount) {
   const cursor = new Date();
   cursor.setHours(0, 0, 0, 0);
 
-  const days = [];
+  // The window as runs of consecutive days sharing a month.
+  const runs = [];
   for (let i = 0; i < span; i++) {
-    days.push({
+    const month = cursor.getMonth();
+    if (runs[runs.length - 1]?.month !== month) runs.push({ month, days: [] });
+    runs[runs.length - 1].days.push({
       id: dateStr(cursor),
       day: cursor.getDate(),
-      month: cursor.getMonth(),
+      month,
       weekday: WEEKDAY_NAMES[cursor.getDay()]
     });
     cursor.setDate(cursor.getDate() + 1);
   }
 
-  const size = days.length > MAX_CHIPS ? Math.ceil(days.length / 2) : days.length;
+  // A window can open on the last day or two of a month, leaving a run too
+  // short to be a group of its own. Absorb it into the next run so the stub
+  // leads the group it belongs with, or the previous one if it ends the window.
+  for (let i = runs.length - 1; i >= 0; i--) {
+    if (runs.length === 1 || runs[i].days.length >= MIN_CHIPS) continue;
+    const forward = Boolean(runs[i + 1]);
+    const into = forward ? runs[i + 1] : runs[i - 1];
+    into.days = forward ? [...runs[i].days, ...into.days] : [...into.days, ...runs[i].days];
+    runs.splice(i, 1);
+  }
+
+  // Split a run that outgrows a selector into even chunks rather than 20 plus a
+  // remainder, so a 21-day month becomes 11 + 10 — a chunk of one would not
+  // render at all.
   const groups = [];
-  for (let i = 0; i < days.length; i += size) groups.push(days.slice(i, i + size));
-  return groups.map((group) => {
+  for (const run of runs) {
+    const chunkCount = Math.ceil(run.days.length / MAX_CHIPS);
+    const size = Math.ceil(run.days.length / chunkCount);
+    for (let i = 0; i < run.days.length; i += size) groups.push(run.days.slice(i, i + size));
+  }
+
+  // Titles come last, off each group's final contents, so the merging above
+  // cannot leave a heading describing days that moved elsewhere.
+  const capped = groups.slice(0, DATE_CHIP_GROUPS);
+  const spread = countGroupsPerMonth(capped);
+  return capped.map((group) => {
     const home = group[0].month;
     return {
-      label: labelFor(group),
-      // The label names the group's own month, so only days carried over from
-      // the next one have to say which month they belong to.
+      label: labelFor(group, spread.get(home) === 1),
+      // The label names the group's own month, so only days pulled in from
+      // another month have to say which one they belong to.
       days: group.map((d) => ({
         id: d.id,
         title: d.month === home ? `${d.weekday} ${d.day}` : `${d.weekday} ${d.day} ${MONTH_ABBR[d.month]}`
@@ -147,43 +173,59 @@ function buildDateChipGroups(daysCount) {
   });
 }
 
-// "July" for a group inside one month, "July 28 – August 11" for one that
-// crosses into the next. Never empty: `label` is mandatory on a ChipsSelector
-// and a blank one invalidates the whole screen's form.
-function labelFor(days) {
-  const first = days[0];
-  const last = days[days.length - 1];
-  if (first.month === last.month) return MONTH_NAMES[first.month];
-  return `${MONTH_NAMES[first.month]} ${first.day} – ${MONTH_NAMES[last.month]} ${last.day}`;
+// How many groups each month is spread across, so a month that fits in one can
+// be titled by name and a split one by its day range.
+function countGroupsPerMonth(groups) {
+  const counts = new Map();
+  for (const group of groups) {
+    for (const month of new Set(group.map((d) => d.month))) {
+      counts.set(month, (counts.get(month) || 0) + 1);
+    }
+  }
+  return counts;
 }
 
+// "July" for a month that needs only this group, "August 1–20" for one split
+// across several, "July 31 – August 19" for a group spanning a boundary. Never
+// empty: `label` is mandatory on a ChipsSelector and a blank one invalidates
+// the whole screen's form.
+function labelFor(days, ownsItsMonth) {
+  const first = days[0];
+  const last = days[days.length - 1];
+  if (first.month !== last.month) {
+    return `${MONTH_NAMES[first.month]} ${first.day} – ${MONTH_NAMES[last.month]} ${last.day}`;
+  }
+  return ownsItsMonth ? MONTH_NAMES[first.month] : `${MONTH_NAMES[first.month]} ${first.day}–${last.day}`;
+}
+
+// No group is ever marked required, and that is deliberate. A required field
+// that is empty makes the whole screen's form invalid, and Flows silently
+// swallow on-select-action on an invalid form. Only one date is ever picked, so
+// with several required groups the others stay empty, the form can never become
+// valid, and every chip on the screen stops responding — the frozen date screen
+// this had before. Nothing gates the screen anyway now that the tap navigates:
+// the endpoint rejects an empty submission instead.
 async function dateScreen(venueId, acc) {
   const venue = await fetchVenueDetails(venueId);
-  const [g1, g2] = buildDateChipGroups(venue?.days_count);
-  if (!g1) return infoScreen("This venue isn't open for booking right now.");
+  const groups = buildDateChipGroups(venue?.days_count);
+  if (!groups.length) return infoScreen("This venue isn't open for booking right now.");
   // A one-day window is not a choice, and chips will not draw a lone option.
-  if (!g2 && g1.days.length < MIN_CHIPS) {
-    return courtOrTimeScreen(venueId, { ...acc, date: g1.days[0].id });
+  if (groups.length === 1 && groups[0].days.length < MIN_CHIPS) {
+    return courtOrTimeScreen(venueId, { ...acc, date: groups[0].days[0].id });
   }
 
-  return {
-    screen: "DATE",
-    data: {
-      g1_label: g1.label,
-      g1_days: g1.days,
-      // Only one group can be required. Requiring g1 while g2 is on screen
-      // would leave the footer disabled for anyone picking a later date, so a
-      // split window relies on the endpoint guard instead — at the cost of an
-      // "(Optional)" beside both labels.
-      g1_required: !g2,
-      g2_label: g2?.label || "Later",
-      g2_days: g2?.days || UNUSED_CHIPS,
-      // A hidden group still has to satisfy the 2-chip rule: an invalid
-      // component anywhere on the screen blocks the footer, visible or not.
-      g2_visible: Boolean(g2),
-      sport_name: acc.sport_name
-    }
-  };
+  const data = { sport_name: acc.sport_name };
+  for (let i = 0; i < DATE_CHIP_GROUPS; i++) {
+    const group = groups[i];
+    const n = i + 1;
+    data[`g${n}_label`] = group?.label || "Date";
+    // A hidden group still has to satisfy the 2-chip rule: an invalid component
+    // anywhere on the screen freezes it, whether or not it is on screen.
+    data[`g${n}_days`] = group?.days || UNUSED_CHIPS;
+    // g1 always renders; the rest are hidden when the window doesn't reach them.
+    if (n > 1) data[`g${n}_visible`] = Boolean(group);
+  }
+  return { screen: "DATE", data };
 }
 
 async function courtOrTimeScreen(venueId, acc) {
@@ -380,7 +422,10 @@ export async function handleFlowRequest(body) {
         // Each group is its own field, so only the tapped one carries a value.
         // Plain `date` is read too, so anyone mid-booking on the DatePicker
         // version still advances after a redeploy.
-        const date = normalizeDate(firstOf(acc.date_g1) || firstOf(acc.date_g2) || acc.date);
+        const date = normalizeDate(
+          firstOf(acc.date_g1) || firstOf(acc.date_g2) || firstOf(acc.date_g3)
+            || firstOf(acc.date_g4) || acc.date
+        );
         if (!date) return infoScreen("Please pick a date to continue.");
         return courtOrTimeScreen(venueId, { ...acc, date });
       }
