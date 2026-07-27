@@ -226,12 +226,10 @@ The endpoint returns `200 {ok:true,...}` on success and on any *internal* skip
 retries for a messaging problem. It returns `401` only for a bad/missing
 signature and `400` for malformed input.
 
-**Payment-method preference:** the SUMMARY screen's *Pay using* chip
-(GPay / PhonePe / Paytm / Other UPI / Card) rides through to the checkout URL as
-`prefer=upi&upi_app=google_pay` (or `prefer=card`). `v2_checkout_live.html`
-should read `upi_app` / `prefer` and preselect that method/app in Razorpay
-Checkout. A Flow cannot launch the payment app itself, so this is a preselection
-hint, not a deep link.
+**Payment method** is chosen on the checkout page, not in the Flow. A Flow has
+no way to launch GPay/PhonePe (there is no intent action, and WhatsApp CTA
+buttons only accept http/https), so the checkout URL just carries `prefer=upi`
+and `v2_checkout_live.html` surfaces the UPI apps itself.
 
 ---
 
@@ -244,8 +242,8 @@ hint, not a deep link.
 - **Stale-booking sweep** — a booking whose payment never captures stays
   `processing`. A cron/lazy sweep to cancel it and notify the customer is not
   built.
-- **`v2_checkout_live.html` / `v2_webhook_live.php` edits** — the two external
-  PHP changes above (honour `upi_app`/`prefer`; POST to `/payment-notify`) live
-  in the GameOn PHP backend, not this repo.
+- **`v2_webhook_live.php` edit** — the external PHP change above (POST to
+  `/payment-notify` after capture) lives in the GameOn PHP backend, not this
+  repo. It is the only PHP change still required.
 - **Coexistence** (Business app + API on the same number) — only relevant for
   the real Legend Arena number, not this test number. See the project plan.
