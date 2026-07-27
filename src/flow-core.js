@@ -140,10 +140,24 @@ async function timeScreen(venueId, acc) {
   if (!times.length) {
     return infoScreen("Sorry, no free slots for that date. Please try another date.");
   }
+  // The only free slot is not a choice, and chips will not render it alone.
+  if (times.length < MIN_CHIPS) {
+    return durationScreen({ ...acc, court_name: courtName, start_time: times[0].slot_time });
+  }
+  // Slots are hourly, so a day holds at most 24 and all but a round-the-clock
+  // venue fits. Truncating loses bookable hours, so say so in the logs.
+  if (times.length > MAX_CHIPS) {
+    logWarn("Start times truncated to fit a ChipsSelector", {
+      courtId: acc.court_id,
+      date: acc.date,
+      available: times.length,
+      shown: MAX_CHIPS
+    });
+  }
   return {
     screen: "TIME",
     data: {
-      times: times.map((t) => ({ id: t.slot_time, title: to12h(t.slot_time) })),
+      times: times.slice(0, MAX_CHIPS).map((t) => ({ id: t.slot_time, title: to12hShort(t.slot_time) })),
       sport_name: acc.sport_name,
       date: acc.date,
       court_id: acc.court_id,
@@ -153,7 +167,11 @@ async function timeScreen(venueId, acc) {
 }
 
 // Offer only durations whose whole span is still free (re-checked live).
-async function durationScreen(venueId, acc) {
+//
+// Stays a RadioButtonsGroup rather than chips: chips wrap several to a row and
+// clip anything long, and each option here has to carry its end time and price.
+// A radio list gives every option its own full-width row.
+async function durationScreen(acc) {
   const durations = [];
   for (let h = 1; h <= MAX_DURATION_HOURS; h++) {
     const end = addMinutes(acc.start_time, h * 60);
@@ -164,19 +182,11 @@ async function durationScreen(venueId, acc) {
     const { price } = await priceForSpan(acc.court_id, acc.date, acc.start_time, end);
     durations.push({
       id: String(h),
-      // Kept short so it reads as a chip rather than wrapping to a full row.
-      title: `${h}h · till ${to12hShort(end)} · ₹${price}`
+      title: `${h} hour${h > 1 ? "s" : ""} · till ${to12hShort(end)} · ₹${price}`
     });
   }
   if (!durations.length) {
     return infoScreen("That start time is no longer available. Please try another.");
-  }
-  // Only one length fits before the next booking — chips will not render a lone
-  // option, and it is no choice anyway. The summary still shows it before
-  // anyone pays.
-  if (durations.length < MIN_CHIPS) {
-    const venue = await fetchVenueDetails(venueId);
-    return summaryScreen(venue, { ...acc, duration: durations[0].id });
   }
   return {
     screen: "DURATION",
@@ -287,8 +297,11 @@ export async function handleFlowRequest(body) {
         if (!courtId) return infoScreen("Please pick a court to continue.");
         return timeScreen(venueId, { ...acc, court_id: courtId });
       }
-      case "TIME":
-        return durationScreen(venueId, acc);
+      case "TIME": {
+        const startTime = firstOf(acc.start_time);
+        if (!startTime) return infoScreen("Please pick a start time to continue.");
+        return durationScreen({ ...acc, start_time: startTime });
+      }
       case "DURATION": {
         const duration = firstOf(acc.duration);
         if (!duration) return infoScreen("Please pick a duration to continue.");
