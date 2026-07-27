@@ -5,7 +5,7 @@
     "SPORT": ["DATE", "INFO"],
     "DATE": ["COURT", "TIME", "INFO"],
     "COURT": ["TIME", "INFO"],
-    "TIME": ["DURATION", "INFO"],
+    "TIME": ["DURATION", "SUMMARY", "INFO"],
     "DURATION": ["SUMMARY", "INFO"],
     "SUMMARY": [],
     "INFO": []
@@ -192,7 +192,10 @@
               "title": { "type": "string" }
             }
           },
-          "__example__": [{ "id": "1", "title": "1 hour · ends 7:00 AM · ₹300" }]
+          "__example__": [
+            { "id": "1", "title": "1h · till 7 AM · ₹300" },
+            { "id": "2", "title": "2h · till 8 AM · ₹600" }
+          ]
         },
         "sport_name": { "type": "string", "__example__": "Football" },
         "date": { "type": "string", "__example__": "2026-07-26" },
@@ -204,10 +207,11 @@
         "type": "SingleColumnLayout",
         "children": [
           {
-            "type": "Dropdown",
+            "type": "ChipsSelector",
             "name": "duration",
             "label": "Duration",
             "required": true,
+            "max-selected-items": 1,
             "data-source": "${data.durations}"
           },
           {

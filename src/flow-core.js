@@ -153,7 +153,7 @@ async function timeScreen(venueId, acc) {
 }
 
 // Offer only durations whose whole span is still free (re-checked live).
-async function durationScreen(acc) {
+async function durationScreen(venueId, acc) {
   const durations = [];
   for (let h = 1; h <= MAX_DURATION_HOURS; h++) {
     const end = addMinutes(acc.start_time, h * 60);
@@ -164,11 +164,19 @@ async function durationScreen(acc) {
     const { price } = await priceForSpan(acc.court_id, acc.date, acc.start_time, end);
     durations.push({
       id: String(h),
-      title: `${h} hour${h > 1 ? "s" : ""} · ends ${to12h(end)} · ₹${price}`
+      // Kept short so it reads as a chip rather than wrapping to a full row.
+      title: `${h}h · till ${to12hShort(end)} · ₹${price}`
     });
   }
   if (!durations.length) {
     return infoScreen("That start time is no longer available. Please try another.");
+  }
+  // Only one length fits before the next booking — chips will not render a lone
+  // option, and it is no choice anyway. The summary still shows it before
+  // anyone pays.
+  if (durations.length < MIN_CHIPS) {
+    const venue = await fetchVenueDetails(venueId);
+    return summaryScreen(venue, { ...acc, duration: durations[0].id });
   }
   return {
     screen: "DURATION",
@@ -227,6 +235,11 @@ function to12h(hhmm) {
   return `${h12}:${String(m).padStart(2, "0")} ${period}`;
 }
 
+// Same clock, minus a ":00" that buys nothing on a chip: "8 AM", "8:30 AM".
+function to12hShort(hhmm) {
+  return to12h(hhmm).replace(":00", "");
+}
+
 // ---- Router -----------------------------------------------------------------
 
 export async function handleFlowRequest(body) {
@@ -275,9 +288,12 @@ export async function handleFlowRequest(body) {
         return timeScreen(venueId, { ...acc, court_id: courtId });
       }
       case "TIME":
-        return durationScreen(acc);
-      case "DURATION":
-        return summaryScreen(await fetchVenueDetails(venueId), acc);
+        return durationScreen(venueId, acc);
+      case "DURATION": {
+        const duration = firstOf(acc.duration);
+        if (!duration) return infoScreen("Please pick a duration to continue.");
+        return summaryScreen(await fetchVenueDetails(venueId), { ...acc, duration });
+      }
       default:
         logWarn("Unknown Flow screen in data_exchange", { screen });
         return infoScreen("Something went wrong. Please try again.");
