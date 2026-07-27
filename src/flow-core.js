@@ -29,6 +29,13 @@ const CHIPS_PER_GROUP = 20;
 const DATE_CHIP_GROUPS = 4;
 const MAX_BOOKING_DAYS = 31;
 
+// Meta refuses to render a ChipsSelector holding a single option ("dataSource
+// array must contain at least 2 options"), so no group may ever be built with
+// one chip. Where a screen has only one real choice there is nothing to decide,
+// and it is skipped outright.
+const MIN_CHIPS_PER_GROUP = 2;
+const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
@@ -97,6 +104,10 @@ async function sportScreen(venueId) {
   }
   const sports = [...seen.values()];
   if (!sports.length) return infoScreen("This venue has no sports configured yet.");
+  // A single-sport venue has nothing to choose — open straight on the dates.
+  if (sports.length < MIN_CHIPS_PER_GROUP) {
+    return dateScreen(venueId, { sport_name: sports[0].id });
+  }
   return { screen: "SPORT", data: { sports: sports.slice(0, CHIPS_PER_GROUP) } };
 }
 
@@ -131,17 +142,50 @@ function buildDateChipGroups(daysCount) {
       groups.push({
         // Continuation chunks repeat no heading; the chips read as one month.
         label: i === 0 ? month.label : " ",
+        monthKey: month.key,
         days: month.days.slice(i, i + CHIPS_PER_GROUP)
       });
     }
   }
+
+  // A window can end a day or two into the next month, leaving a stray group
+  // Meta won't render. Fold it back into the group before it, tagging the moved
+  // chips with their month so the heading above them stays truthful.
+  for (let i = groups.length - 1; i > 0; i--) {
+    const group = groups[i];
+    if (group.days.length >= MIN_CHIPS_PER_GROUP) continue;
+    const prev = groups[i - 1];
+    const moved = group.days.map((d) =>
+      group.monthKey === prev.monthKey ? d : { ...d, title: `${d.title} ${monthAbbrOf(d.id)}` }
+    );
+    if (prev.days.length + moved.length <= CHIPS_PER_GROUP) {
+      prev.days.push(...moved);
+      groups.splice(i, 1);
+    } else {
+      // The previous group is already full, so lend it chips instead.
+      while (group.days.length < MIN_CHIPS_PER_GROUP && prev.days.length > MIN_CHIPS_PER_GROUP) {
+        const lent = prev.days.pop();
+        group.days.unshift(
+          group.monthKey === prev.monthKey ? lent : { ...lent, title: `${lent.title} ${monthAbbrOf(lent.id)}` }
+        );
+      }
+    }
+  }
   return groups.slice(0, DATE_CHIP_GROUPS);
+}
+
+function monthAbbrOf(isoDate) {
+  return MONTH_ABBR[Number(isoDate.slice(5, 7)) - 1];
 }
 
 async function dateScreen(venueId, acc) {
   const venue = await fetchVenueDetails(venueId);
   const groups = buildDateChipGroups(venue?.days_count);
   if (!groups.length) return infoScreen("This venue isn't open for booking right now.");
+  // A one-day window can't be a chip group and isn't a choice — take it.
+  if (groups.length === 1 && groups[0].days.length < MIN_CHIPS_PER_GROUP) {
+    return courtOrTimeScreen(venueId, { ...acc, date: groups[0].days[0].id });
+  }
 
   const data = { sport_name: acc.sport_name };
   for (let i = 0; i < DATE_CHIP_GROUPS; i++) {
@@ -185,19 +229,21 @@ async function timeScreen(venueId, acc) {
   if (!times.length) {
     return infoScreen("Sorry, no free slots for that date. Please try another date.");
   }
-  // A day can hold more slots than one ChipsSelector allows, so split at noon —
-  // which also reads better than one long strip.
-  const chip = (t) => ({ id: t.slot_time, title: to12h(t.slot_time) });
-  const am = times.filter((t) => Number(t.slot_time.split(":")[0]) < 12);
-  const pm = times.filter((t) => Number(t.slot_time.split(":")[0]) >= 12);
+  // The only free slot is not a choice — take it and ask for the duration.
+  if (times.length < MIN_CHIPS_PER_GROUP) {
+    return durationScreen(venueId, { ...acc, court_name: courtName, start_time: times[0].slot_time });
+  }
 
+  const [first, second] = buildTimeChipGroups(times);
   return {
     screen: "TIME",
     data: {
-      times_am: am.slice(0, CHIPS_PER_GROUP).map(chip),
-      times_pm: pm.slice(0, CHIPS_PER_GROUP).map(chip),
-      am_visible: am.length > 0,
-      pm_visible: pm.length > 0,
+      times_am: first.items,
+      times_pm: second?.items || [],
+      am_label: first.label,
+      pm_label: second?.label || " ",
+      am_visible: true,
+      pm_visible: Boolean(second),
       sport_name: acc.sport_name,
       date: acc.date,
       court_id: acc.court_id,
@@ -206,8 +252,36 @@ async function timeScreen(venueId, acc) {
   };
 }
 
+// Splitting the day at noon reads well, but only when both halves can actually
+// render — a morning holding one slot would be dropped by Meta. So split only
+// when the list genuinely outgrows a single selector, and fall back to an even
+// two-way split when the noon halves are lopsided.
+function buildTimeChipGroups(times) {
+  const chip = (t) => ({ id: t.slot_time, title: to12h(t.slot_time) });
+  if (times.length <= CHIPS_PER_GROUP) {
+    return [{ label: "Start time", items: times.map(chip) }];
+  }
+
+  const am = times.filter((t) => Number(t.slot_time.split(":")[0]) < 12);
+  const pm = times.filter((t) => Number(t.slot_time.split(":")[0]) >= 12);
+  const fits = (list) => list.length >= MIN_CHIPS_PER_GROUP && list.length <= CHIPS_PER_GROUP;
+  if (fits(am) && fits(pm)) {
+    return [
+      { label: "Morning", items: am.map(chip) },
+      { label: "Afternoon & Evening", items: pm.map(chip) }
+    ];
+  }
+
+  const capped = times.slice(0, CHIPS_PER_GROUP * 2);
+  const half = Math.ceil(capped.length / 2);
+  return [
+    { label: "Start time", items: capped.slice(0, half).map(chip) },
+    { label: " ", items: capped.slice(half).map(chip) }
+  ];
+}
+
 // Offer only durations whose whole span is still free (re-checked live).
-async function durationScreen(acc) {
+async function durationScreen(venueId, acc) {
   const durations = [];
   for (let h = 1; h <= MAX_DURATION_HOURS; h++) {
     const end = addMinutes(acc.start_time, h * 60);
@@ -224,6 +298,12 @@ async function durationScreen(acc) {
   }
   if (!durations.length) {
     return infoScreen("That start time is no longer available. Please try another.");
+  }
+  // Only one length fits before the next booking — go straight to the summary,
+  // where the customer still sees it and confirms before paying.
+  if (durations.length < MIN_CHIPS_PER_GROUP) {
+    const venue = await fetchVenueDetails(venueId);
+    return summaryScreen(venue, { ...acc, duration: durations[0].id });
   }
   return {
     screen: "DURATION",
@@ -344,7 +424,7 @@ export async function handleFlowRequest(body) {
         // Slots are split across a morning and an afternoon/evening group.
         const startTime = firstOf(acc.start_time_am) || firstOf(acc.start_time_pm);
         if (!startTime) return infoScreen("Please pick a start time to continue.");
-        return durationScreen({ ...acc, start_time: startTime });
+        return durationScreen(venueId, { ...acc, start_time: startTime });
       }
       case "DURATION": {
         const duration = firstOf(acc.duration);
