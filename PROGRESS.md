@@ -49,10 +49,11 @@ See [FLOW_SETUP.md](FLOW_SETUP.md) for the exact commands.
   "Something went wrong".
 - A Flow screen may never route to itself — Meta rejects it as a routing loop.
 - One invalid component blocks every action on its screen, even when hidden.
-- Every selection is a `ChipsSelector`, but navigation stays on a `Next` footer.
-  An earlier version navigated from `on-select-action` instead and had to be
-  abandoned — a form Flows consider invalid swallows that action silently, so a
-  single bad component froze the screen with no way forward.
+- Every selection is a `ChipsSelector`, and navigation stays on a `Next` footer.
+  **Do not try `on-select-action` again.** It has been attempted twice; the
+  second time (`105a87d`, reverted) a sport chip tap never reached the date
+  screen at all, with or without `required` set. Whatever the cause, one-tap
+  chip navigation does not work here — a footer does.
 - A `ChipsSelector` needs 2–20 options at runtime, not just in preview. Hence
   the endpoint skipping a screen whose list has one entry (single-sport venue,
   single court, one free slot), capping at 20, and padding hidden groups.
