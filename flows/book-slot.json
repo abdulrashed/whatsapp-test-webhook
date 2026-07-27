@@ -105,6 +105,10 @@
         "type": "SingleColumnLayout",
         "children": [
           {
+            "type": "TextCaption",
+            "text": "Tap one date, then Next."
+          },
+          {
             "type": "ChipsSelector",
             "name": "date_g1",
             "label": "${data.g1_label}",
