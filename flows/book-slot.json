@@ -59,9 +59,16 @@
               "title": { "type": "string" }
             }
           },
-          "__example__": [{ "id": "2026-07-26", "title": "26 Sun" }]
+          "__example__": [
+            { "id": "2026-07-26", "title": "26 Sun" },
+            { "id": "2026-07-27", "title": "27 Mon" },
+            { "id": "2026-07-28", "title": "28 Tue" },
+            { "id": "2026-07-29", "title": "29 Wed" },
+            { "id": "2026-07-30", "title": "30 Thu" },
+            { "id": "2026-07-31", "title": "31 Fri" }
+          ]
         },
-        "g2_visible": { "type": "boolean", "__example__": true },
+        "g2_visible": { "type": "boolean", "__example__": false },
         "g2_label": { "type": "string", "__example__": "August 2026" },
         "g2_days": {
           "type": "array",
