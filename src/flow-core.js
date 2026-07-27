@@ -80,42 +80,22 @@ function addMinutes(hhmm, minutes) {
 
 // ---- Screen builders --------------------------------------------------------
 
-// SPORT/COURT/TIME/DURATION render as NavigationList tiles that advance on a
-// single tap. ChipsSelector can't carry an on-select-action, but a
-// NavigationItem can carry its own on-click-action — and because the list is
-// built server-side we bake the exact next-screen payload into each tile. That
-// sidesteps needing a component-level "which item was tapped" reference.
-// Meta caps a NavigationList at 20 items (extras are dropped silently).
-const NAV_MAX_ITEMS = 20;
-
-function navItem(id, title, payload, { metadata, description, endTitle } = {}) {
-  const mainContent = { title: String(title).slice(0, 30) };
-  if (description) mainContent.description = String(description).slice(0, 20);
-  if (metadata) mainContent.metadata = String(metadata).slice(0, 80);
-  const item = {
-    id: String(id),
-    "main-content": mainContent,
-    "on-click-action": { name: "data_exchange", payload }
-  };
-  if (endTitle) item.end = { title: String(endTitle).slice(0, 10) };
-  return item;
-}
-
+// Every selection screen renders as ChipsSelector. Chips can't carry an
+// on-select-action, so each screen pairs its chips with a "Next" Footer that
+// submits the form value(s). Meta caps a ChipsSelector at CHIPS_PER_GROUP
+// options, so long lists (dates, time slots) are split across labelled groups.
 async function sportScreen(venueId) {
   const courts = await fetchCourtDetails(venueId);
-  const seen = new Set();
-  const items = [];
+  const seen = new Map();
   for (const c of courts) {
     for (const s of c.sports || []) {
       const name = s.sport_name || s.name;
-      if (name && !seen.has(name)) {
-        seen.add(name);
-        items.push(navItem(name, name, { sport_name: name }));
-      }
+      if (name && !seen.has(name)) seen.set(name, { id: name, title: name });
     }
   }
-  if (!items.length) return infoScreen("This venue has no sports configured yet.");
-  return { screen: "SPORT", data: { sports: items.slice(0, NAV_MAX_ITEMS) } };
+  const sports = [...seen.values()];
+  if (!sports.length) return infoScreen("This venue has no sports configured yet.");
+  return { screen: "SPORT", data: { sports: sports.slice(0, CHIPS_PER_GROUP) } };
 }
 
 // Builds the open days as chip groups: one group per calendar month, split
@@ -184,14 +164,9 @@ async function courtOrTimeScreen(venueId, acc) {
   return {
     screen: "COURT",
     data: {
-      courts: active.slice(0, NAV_MAX_ITEMS).map((c) =>
-        navItem(c.id, c.name, {
-          sport_name: acc.sport_name,
-          date: acc.date,
-          court_id: c.id,
-          court_name: c.name
-        })
-      )
+      courts: active.slice(0, CHIPS_PER_GROUP).map((c) => ({ id: c.id, title: c.name })),
+      sport_name: acc.sport_name,
+      date: acc.date
     }
   };
 }
@@ -208,18 +183,23 @@ async function timeScreen(venueId, acc) {
   if (!times.length) {
     return infoScreen("Sorry, no free slots for that date. Please try another date.");
   }
+  // A day can hold more slots than one ChipsSelector allows, so split at noon —
+  // which also reads better than one long strip.
+  const chip = (t) => ({ id: t.slot_time, title: to12h(t.slot_time) });
+  const am = times.filter((t) => Number(t.slot_time.split(":")[0]) < 12);
+  const pm = times.filter((t) => Number(t.slot_time.split(":")[0]) >= 12);
+
   return {
     screen: "TIME",
     data: {
-      times: times.slice(0, NAV_MAX_ITEMS).map((t) =>
-        navItem(t.slot_time, to12h(t.slot_time), {
-          sport_name: acc.sport_name,
-          date: acc.date,
-          court_id: acc.court_id,
-          court_name: courtName,
-          start_time: t.slot_time
-        })
-      )
+      times_am: am.slice(0, CHIPS_PER_GROUP).map(chip),
+      times_pm: pm.slice(0, CHIPS_PER_GROUP).map(chip),
+      am_visible: am.length > 0,
+      pm_visible: pm.length > 0,
+      sport_name: acc.sport_name,
+      date: acc.date,
+      court_id: acc.court_id,
+      court_name: courtName
     }
   };
 }
@@ -234,26 +214,23 @@ async function durationScreen(acc) {
     if (!ok) break; // once an hour is blocked, longer spans are too
     // eslint-disable-next-line no-await-in-loop
     const { price } = await priceForSpan(acc.court_id, acc.date, acc.start_time, end);
-    durations.push(
-      navItem(
-        String(h),
-        `${h} hour${h > 1 ? "s" : ""}`,
-        {
-          sport_name: acc.sport_name,
-          date: acc.date,
-          court_id: acc.court_id,
-          court_name: acc.court_name,
-          start_time: acc.start_time,
-          duration: String(h)
-        },
-        { metadata: `ends ${to12h(end)}`, endTitle: `₹${price}` }
-      )
-    );
+    // Kept short so the chips stay compact; the full span is on SUMMARY.
+    durations.push({ id: String(h), title: `${h}h · ₹${price}` });
   }
   if (!durations.length) {
     return infoScreen("That start time is no longer available. Please try another.");
   }
-  return { screen: "DURATION", data: { durations } };
+  return {
+    screen: "DURATION",
+    data: {
+      durations,
+      sport_name: acc.sport_name,
+      date: acc.date,
+      court_id: acc.court_id,
+      court_name: acc.court_name,
+      start_time: acc.start_time
+    }
+  };
 }
 
 async function summaryScreen(venue, acc) {
@@ -330,8 +307,11 @@ export async function handleFlowRequest(body) {
 
   if (action === "data_exchange") {
     switch (screen) {
-      case "SPORT":
-        return dateScreen(venueId, acc);
+      case "SPORT": {
+        const sportName = firstOf(acc.sport_name);
+        if (!sportName) return sportScreen(venueId);
+        return dateScreen(venueId, { ...acc, sport_name: sportName });
+      }
       case "DATE": {
         // ChipsSelector has no on-select-action, so DATE uses a Footer that
         // submits all group fields; the chosen day is in whichever is non-empty.
@@ -348,12 +328,16 @@ export async function handleFlowRequest(body) {
         return timeScreen(venueId, { ...acc, court_id: courtId });
       }
       case "TIME": {
-        const startTime = firstOf(acc.start_time);
+        // Slots are split across a morning and an afternoon/evening chip group.
+        const startTime = firstOf(acc.start_time_am) || firstOf(acc.start_time_pm);
         if (!startTime) return timeScreen(venueId, acc);
         return durationScreen({ ...acc, start_time: startTime });
       }
-      case "DURATION":
-        return summaryScreen(await fetchVenueDetails(venueId), acc);
+      case "DURATION": {
+        const duration = firstOf(acc.duration);
+        if (!duration) return durationScreen(acc);
+        return summaryScreen(await fetchVenueDetails(venueId), { ...acc, duration });
+      }
       default:
         logWarn("Unknown Flow screen in data_exchange", { screen });
         return infoScreen("Something went wrong. Please try again.");

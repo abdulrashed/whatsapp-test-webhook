@@ -382,8 +382,7 @@ async function handleFlowCompletion(from, nfmReply, phoneNumberId) {
     amount: order.amount,
     currency: order.currency || "INR",
     name: user.name,
-    contact: userId,
-    payMethod: payload.pay_method
+    contact: userId
   });
 
   await sendCtaUrl(
