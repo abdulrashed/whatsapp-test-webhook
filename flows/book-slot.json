@@ -1,5 +1,5 @@
 {
-  "version": "7.1",
+  "version": "7.0",
   "data_api_version": "3.0",
   "routing_model": {
     "SPORT": ["DATE", "INFO"],
@@ -24,24 +24,23 @@
               "title": { "type": "string" }
             }
           },
-          "__example__": [
-            { "id": "Football", "title": "Football" },
-            { "id": "Cricket", "title": "Cricket" },
-            { "id": "Badminton", "title": "Badminton" }
-          ]
+          "__example__": [{ "id": "Football", "title": "Football" }]
         }
       },
       "layout": {
         "type": "SingleColumnLayout",
         "children": [
           {
-            "type": "ChipsSelector",
+            "type": "RadioButtonsGroup",
             "name": "sport",
             "label": "Sport",
             "required": true,
-            "max-selected-items": 1,
-            "data-source": "${data.sports}",
-            "on-select-action": {
+            "data-source": "${data.sports}"
+          },
+          {
+            "type": "Footer",
+            "label": "Next",
+            "on-click-action": {
               "name": "data_exchange",
               "payload": { "sport_name": "${form.sport}" }
             }
@@ -53,143 +52,29 @@
       "id": "DATE",
       "title": "Select a date",
       "data": {
-        "g1_label": { "type": "string", "__example__": "July 2026" },
-        "g1_required": { "type": "boolean", "__example__": true },
-        "g1_days": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string" },
-              "title": { "type": "string" }
-            }
-          },
-          "__example__": [
-            { "id": "2026-07-27", "title": "27 Mon" },
-            { "id": "2026-07-28", "title": "28 Tue" },
-            { "id": "2026-07-29", "title": "29 Wed" },
-            { "id": "2026-07-30", "title": "30 Thu" },
-            { "id": "2026-07-31", "title": "31 Fri" }
-          ]
-        },
-        "g2_visible": { "type": "boolean", "__example__": true },
-        "g2_label": { "type": "string", "__example__": "August 1–13" },
-        "g2_required": { "type": "boolean", "__example__": true },
-        "g2_days": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string" },
-              "title": { "type": "string" }
-            }
-          },
-          "__example__": [
-            { "id": "2026-08-01", "title": "1 Sat" },
-            { "id": "2026-08-02", "title": "2 Sun" },
-            { "id": "2026-08-03", "title": "3 Mon" }
-          ]
-        },
-        "g3_visible": { "type": "boolean", "__example__": true },
-        "g3_label": { "type": "string", "__example__": "August 14–25" },
-        "g3_required": { "type": "boolean", "__example__": true },
-        "g3_days": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string" },
-              "title": { "type": "string" }
-            }
-          },
-          "__example__": [
-            { "id": "2026-08-14", "title": "14 Fri" },
-            { "id": "2026-08-15", "title": "15 Sat" },
-            { "id": "2026-08-16", "title": "16 Sun" }
-          ]
-        },
-        "g4_visible": { "type": "boolean", "__example__": false },
-        "g4_label": { "type": "string", "__example__": "Date" },
-        "g4_required": { "type": "boolean", "__example__": false },
-        "g4_days": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string" },
-              "title": { "type": "string" }
-            }
-          },
-          "__example__": [
-            { "id": "__unused_1", "title": "—" },
-            { "id": "__unused_2", "title": "—" }
-          ]
-        },
+        "min_date": { "type": "string", "__example__": "1785196800000" },
+        "max_date": { "type": "string", "__example__": "1787788800000" },
         "sport_name": { "type": "string", "__example__": "Football" }
       },
       "layout": {
         "type": "SingleColumnLayout",
         "children": [
           {
-            "type": "ChipsSelector",
-            "name": "date_g1",
-            "label": "${data.g1_label}",
-            "required": "${data.g1_required}",
-            "max-selected-items": 1,
-            "data-source": "${data.g1_days}",
-            "on-select-action": {
-              "name": "data_exchange",
-              "payload": {
-                "sport_name": "${data.sport_name}",
-                "date_g1": "${form.date_g1}"
-              }
-            }
+            "type": "DatePicker",
+            "name": "date",
+            "label": "Date",
+            "required": true,
+            "min-date": "${data.min_date}",
+            "max-date": "${data.max_date}"
           },
           {
-            "type": "ChipsSelector",
-            "name": "date_g2",
-            "label": "${data.g2_label}",
-            "visible": "${data.g2_visible}",
-            "required": "${data.g2_required}",
-            "max-selected-items": 1,
-            "data-source": "${data.g2_days}",
-            "on-select-action": {
+            "type": "Footer",
+            "label": "Next",
+            "on-click-action": {
               "name": "data_exchange",
               "payload": {
                 "sport_name": "${data.sport_name}",
-                "date_g2": "${form.date_g2}"
-              }
-            }
-          },
-          {
-            "type": "ChipsSelector",
-            "name": "date_g3",
-            "label": "${data.g3_label}",
-            "visible": "${data.g3_visible}",
-            "required": "${data.g3_required}",
-            "max-selected-items": 1,
-            "data-source": "${data.g3_days}",
-            "on-select-action": {
-              "name": "data_exchange",
-              "payload": {
-                "sport_name": "${data.sport_name}",
-                "date_g3": "${form.date_g3}"
-              }
-            }
-          },
-          {
-            "type": "ChipsSelector",
-            "name": "date_g4",
-            "label": "${data.g4_label}",
-            "visible": "${data.g4_visible}",
-            "required": "${data.g4_required}",
-            "max-selected-items": 1,
-            "data-source": "${data.g4_days}",
-            "on-select-action": {
-              "name": "data_exchange",
-              "payload": {
-                "sport_name": "${data.sport_name}",
-                "date_g4": "${form.date_g4}"
+                "date": "${form.date}"
               }
             }
           }
@@ -209,10 +94,7 @@
               "title": { "type": "string" }
             }
           },
-          "__example__": [
-            { "id": "court1", "title": "Court 1" },
-            { "id": "court2", "title": "Court 2" }
-          ]
+          "__example__": [{ "id": "court1", "title": "Court 1" }]
         },
         "sport_name": { "type": "string", "__example__": "Football" },
         "date": { "type": "string", "__example__": "2026-07-26" }
@@ -221,13 +103,16 @@
         "type": "SingleColumnLayout",
         "children": [
           {
-            "type": "ChipsSelector",
+            "type": "RadioButtonsGroup",
             "name": "court",
             "label": "Court",
             "required": true,
-            "max-selected-items": 1,
-            "data-source": "${data.courts}",
-            "on-select-action": {
+            "data-source": "${data.courts}"
+          },
+          {
+            "type": "Footer",
+            "label": "Next",
+            "on-click-action": {
               "name": "data_exchange",
               "payload": {
                 "sport_name": "${data.sport_name}",
@@ -243,7 +128,7 @@
       "id": "TIME",
       "title": "Pick a start time",
       "data": {
-        "times_am": {
+        "times": {
           "type": "array",
           "items": {
             "type": "object",
@@ -252,33 +137,8 @@
               "title": { "type": "string" }
             }
           },
-          "__example__": [
-            { "id": "06:00", "title": "6:00 AM" },
-            { "id": "07:00", "title": "7:00 AM" },
-            { "id": "08:00", "title": "8:00 AM" },
-            { "id": "18:00", "title": "6:00 PM" },
-            { "id": "19:00", "title": "7:00 PM" }
-          ]
+          "__example__": [{ "id": "06:00", "title": "6:00 AM" }]
         },
-        "times_pm": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string" },
-              "title": { "type": "string" }
-            }
-          },
-          "__example__": [
-            { "id": "__unused_1", "title": "—" },
-            { "id": "__unused_2", "title": "—" }
-          ]
-        },
-        "am_label": { "type": "string", "__example__": "Start time" },
-        "am_required": { "type": "boolean", "__example__": true },
-        "pm_label": { "type": "string", "__example__": " " },
-        "am_visible": { "type": "boolean", "__example__": true },
-        "pm_visible": { "type": "boolean", "__example__": false },
         "sport_name": { "type": "string", "__example__": "Football" },
         "date": { "type": "string", "__example__": "2026-07-26" },
         "court_id": { "type": "string", "__example__": "court1" },
@@ -288,40 +148,23 @@
         "type": "SingleColumnLayout",
         "children": [
           {
-            "type": "ChipsSelector",
-            "name": "start_time_am",
-            "label": "${data.am_label}",
-            "visible": "${data.am_visible}",
-            "required": "${data.am_required}",
-            "max-selected-items": 1,
-            "data-source": "${data.times_am}",
-            "on-select-action": {
-              "name": "data_exchange",
-              "payload": {
-                "sport_name": "${data.sport_name}",
-                "date": "${data.date}",
-                "court_id": "${data.court_id}",
-                "court_name": "${data.court_name}",
-                "start_time_am": "${form.start_time_am}"
-              }
-            }
+            "type": "RadioButtonsGroup",
+            "name": "start_time",
+            "label": "Start time",
+            "required": true,
+            "data-source": "${data.times}"
           },
           {
-            "type": "ChipsSelector",
-            "name": "start_time_pm",
-            "label": "${data.pm_label}",
-            "visible": "${data.pm_visible}",
-            "required": false,
-            "max-selected-items": 1,
-            "data-source": "${data.times_pm}",
-            "on-select-action": {
+            "type": "Footer",
+            "label": "Next",
+            "on-click-action": {
               "name": "data_exchange",
               "payload": {
                 "sport_name": "${data.sport_name}",
                 "date": "${data.date}",
                 "court_id": "${data.court_id}",
                 "court_name": "${data.court_name}",
-                "start_time_pm": "${form.start_time_pm}"
+                "start_time": "${form.start_time}"
               }
             }
           }
@@ -341,11 +184,7 @@
               "title": { "type": "string" }
             }
           },
-          "__example__": [
-            { "id": "1", "title": "1h · till 7 AM · ₹300" },
-            { "id": "2", "title": "2h · till 8 AM · ₹600" },
-            { "id": "3", "title": "3h · till 9 AM · ₹900" }
-          ]
+          "__example__": [{ "id": "1", "title": "1 hour · ends 7:00 AM · ₹300" }]
         },
         "sport_name": { "type": "string", "__example__": "Football" },
         "date": { "type": "string", "__example__": "2026-07-26" },
@@ -357,13 +196,16 @@
         "type": "SingleColumnLayout",
         "children": [
           {
-            "type": "ChipsSelector",
+            "type": "Dropdown",
             "name": "duration",
             "label": "Duration",
             "required": true,
-            "max-selected-items": 1,
-            "data-source": "${data.durations}",
-            "on-select-action": {
+            "data-source": "${data.durations}"
+          },
+          {
+            "type": "Footer",
+            "label": "Review",
+            "on-click-action": {
               "name": "data_exchange",
               "payload": {
                 "sport_name": "${data.sport_name}",

@@ -48,5 +48,9 @@ See [FLOW_SETUP.md](FLOW_SETUP.md) for the exact commands.
   a re-paste + re-publish in Flow Builder. A mismatch shows in WhatsApp as
   "Something went wrong".
 - A Flow screen may never route to itself — Meta rejects it as a routing loop.
-- A `ChipsSelector` needs 2–20 options, at runtime as well as in preview.
 - One invalid component blocks every action on its screen, even when hidden.
+- The screens are plain form components (radio buttons, a `DatePicker`, a
+  dropdown) with a `Next` footer each. A one-tap `ChipsSelector` version was
+  tried and reverted: chips are capped at 2–20 options, cannot express "one
+  date across several months", and any group left empty froze the screen.
+- `DatePicker` bounds are epoch-millis strings; an ISO `min-date` is ignored.
