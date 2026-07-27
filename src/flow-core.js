@@ -19,15 +19,8 @@ import { logInfo, logWarn } from "./logger.js";
 
 const MAX_DURATION_HOURS = 8;
 
-// Meta caps a ChipsSelector at 20 options, and Flow JSON cannot repeat a
-// component over an array — so DATE declares a fixed number of chip groups and
-// hides the unused ones. Chips are grouped by calendar month and each month is
-// chunked at 20, so a month costs at most 2 groups. A window of <= 31 days
-// touches at most 2 months, which fits the 4 declared groups; longer windows
-// are clamped rather than silently dropping dates.
+// Meta caps a ChipsSelector at 20 options.
 const CHIPS_PER_GROUP = 20;
-const DATE_CHIP_GROUPS = 4;
-const MAX_BOOKING_DAYS = 31;
 
 // Meta refuses to render a ChipsSelector holding a single option ("dataSource
 // array must contain at least 2 options"), so no group may ever be built with
