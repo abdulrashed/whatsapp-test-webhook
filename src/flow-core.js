@@ -19,6 +19,12 @@ import { logInfo, logWarn } from "./logger.js";
 
 const MAX_DURATION_HOURS = 8;
 
+// SPORT renders its options as a ChipsSelector, which Meta will only draw with
+// 2 to 20 options — fewer and it reports "dataSource array must contain at
+// least 2 options", more and it draws nothing at all.
+const MIN_CHIPS = 2;
+const MAX_CHIPS = 20;
+
 export function buildFlowToken(venueId, waId) {
   return `v1|${venueId}|${waId}`;
 }
@@ -32,6 +38,15 @@ function dateStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
     d.getDate()
   ).padStart(2, "0")}`;
+}
+
+// A ChipsSelector is multi-select by nature, so ${form.sport} arrives as an
+// array even under max-selected-items: 1. Every other screen submits a plain
+// string, which passes through untouched.
+function firstOf(value) {
+  if (Array.isArray(value)) return value.length ? value[0] : null;
+  if (value === "" || value == null) return null;
+  return value;
 }
 
 // Meta's DatePicker submits the selected date as epoch-millis (string). Older
@@ -64,7 +79,11 @@ async function sportScreen(venueId) {
   }
   const sports = [...seen.values()];
   if (!sports.length) return infoScreen("This venue has no sports configured yet.");
-  return { screen: "SPORT", data: { sports } };
+  // One sport is not a choice, and chips will not render it — open on the date.
+  if (sports.length < MIN_CHIPS) {
+    return dateScreen(venueId, { sport_name: sports[0].id });
+  }
+  return { screen: "SPORT", data: { sports: sports.slice(0, MAX_CHIPS) } };
 }
 
 // DatePicker takes its bounds as epoch-millis strings, not "YYYY-MM-DD" — an
@@ -241,8 +260,12 @@ export async function handleFlowRequest(body) {
     logInfo("Flow data_exchange", { screen, payload: data || null });
 
     switch (screen) {
-      case "SPORT":
-        return dateScreen(venueId, acc);
+      case "SPORT": {
+        // The chips submit an array; everything downstream expects a name.
+        const sportName = firstOf(acc.sport_name);
+        if (!sportName) return infoScreen("Please pick a sport to continue.");
+        return dateScreen(venueId, { ...acc, sport_name: sportName });
+      }
       case "DATE":
         return courtOrTimeScreen(venueId, { ...acc, date: normalizeDate(acc.date) });
       case "COURT":

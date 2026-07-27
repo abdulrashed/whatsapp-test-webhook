@@ -24,17 +24,21 @@
               "title": { "type": "string" }
             }
           },
-          "__example__": [{ "id": "Football", "title": "Football" }]
+          "__example__": [
+            { "id": "Football", "title": "Football" },
+            { "id": "Cricket", "title": "Cricket" }
+          ]
         }
       },
       "layout": {
         "type": "SingleColumnLayout",
         "children": [
           {
-            "type": "RadioButtonsGroup",
+            "type": "ChipsSelector",
             "name": "sport",
             "label": "Sport",
             "required": true,
+            "max-selected-items": 1,
             "data-source": "${data.sports}"
           },
           {
