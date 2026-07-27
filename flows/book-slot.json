@@ -37,6 +37,7 @@
             "type": "ChipsSelector",
             "name": "sport",
             "label": "Sport",
+            "required": true,
             "max-selected-items": 1,
             "data-source": "${data.sports}",
             "on-select-action": {
@@ -66,54 +67,6 @@
             { "id": "2026-07-28", "title": "Tue 28" }
           ]
         },
-        "g2_label": { "type": "string", "__example__": "August 1–13" },
-        "g2_visible": { "type": "boolean", "__example__": true },
-        "g2_days": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string" },
-              "title": { "type": "string" }
-            }
-          },
-          "__example__": [
-            { "id": "2026-08-01", "title": "Sat 1" },
-            { "id": "2026-08-02", "title": "Sun 2" }
-          ]
-        },
-        "g3_label": { "type": "string", "__example__": "August 14–26" },
-        "g3_visible": { "type": "boolean", "__example__": false },
-        "g3_days": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string" },
-              "title": { "type": "string" }
-            }
-          },
-          "__example__": [
-            { "id": "2026-08-14", "title": "Fri 14" },
-            { "id": "2026-08-15", "title": "Sat 15" }
-          ]
-        },
-        "g4_label": { "type": "string", "__example__": "Date" },
-        "g4_visible": { "type": "boolean", "__example__": false },
-        "g4_days": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string" },
-              "title": { "type": "string" }
-            }
-          },
-          "__example__": [
-            { "id": "__unused_1", "title": "—" },
-            { "id": "__unused_2", "title": "—" }
-          ]
-        },
         "sport_name": { "type": "string", "__example__": "Football" }
       },
       "layout": {
@@ -123,6 +76,7 @@
             "type": "ChipsSelector",
             "name": "date_1",
             "label": "${data.g1_label}",
+            "required": true,
             "max-selected-items": 1,
             "data-source": "${data.g1_days}",
             "on-select-action": {
@@ -130,51 +84,6 @@
               "payload": {
                 "sport_name": "${data.sport_name}",
                 "date_g1": "${form.date_1}"
-              }
-            }
-          },
-          {
-            "type": "ChipsSelector",
-            "name": "date_2",
-            "label": "${data.g2_label}",
-            "visible": "${data.g2_visible}",
-            "max-selected-items": 1,
-            "data-source": "${data.g2_days}",
-            "on-select-action": {
-              "name": "data_exchange",
-              "payload": {
-                "sport_name": "${data.sport_name}",
-                "date_g2": "${form.date_2}"
-              }
-            }
-          },
-          {
-            "type": "ChipsSelector",
-            "name": "date_3",
-            "label": "${data.g3_label}",
-            "visible": "${data.g3_visible}",
-            "max-selected-items": 1,
-            "data-source": "${data.g3_days}",
-            "on-select-action": {
-              "name": "data_exchange",
-              "payload": {
-                "sport_name": "${data.sport_name}",
-                "date_g3": "${form.date_3}"
-              }
-            }
-          },
-          {
-            "type": "ChipsSelector",
-            "name": "date_4",
-            "label": "${data.g4_label}",
-            "visible": "${data.g4_visible}",
-            "max-selected-items": 1,
-            "data-source": "${data.g4_days}",
-            "on-select-action": {
-              "name": "data_exchange",
-              "payload": {
-                "sport_name": "${data.sport_name}",
-                "date_g4": "${form.date_4}"
               }
             }
           }
@@ -209,6 +118,7 @@
             "type": "ChipsSelector",
             "name": "court",
             "label": "Court",
+            "required": true,
             "max-selected-items": 1,
             "data-source": "${data.courts}",
             "on-select-action": {
@@ -253,6 +163,7 @@
             "type": "ChipsSelector",
             "name": "start_time",
             "label": "Start time",
+            "required": true,
             "max-selected-items": 1,
             "data-source": "${data.times}",
             "on-select-action": {
@@ -300,6 +211,7 @@
             "type": "ChipsSelector",
             "name": "duration",
             "label": "Duration",
+            "required": true,
             "max-selected-items": 1,
             "data-source": "${data.durations}",
             "on-select-action": {
