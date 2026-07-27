@@ -1,98 +1,68 @@
-# WhatsApp Test Webhook
+# WhatsApp Booking Webhook
 
-Standalone Node.js Express webhook for testing Meta WhatsApp Cloud API with the Meta test number.
+WhatsApp Cloud API webhook + booking Flow for GameOn venues (first: Legend Arena).
+Node/Express locally, Vercel serverless in production. Reads/writes the existing
+GameOn Firestore (`turf-app-930c5`); money stays with the PHP Razorpay webhook.
 
-## Current Meta Values
+- Setup on Meta's side: [FLOW_SETUP.md](FLOW_SETUP.md)
+- Current status: [PROGRESS.md](PROGRESS.md)
 
-- App: `Arenza`
-- Test WhatsApp number: `+1 (555) 666-7628`
-- Phone Number ID: `1107576985771392`
-- WhatsApp Business Account ID: `2850166098660100`
+## Routes
 
-## Local Setup
+| Route | Purpose |
+|---|---|
+| `/health` | Liveness + config check |
+| `/webhook` | Meta verification (GET) and inbound messages (POST) |
+| `/flow` | Encrypted Flow data-exchange endpoint |
+| `/send-template` | Manual template send (testing) |
+| `/payment-notify` | HMAC-signed call from `v2_webhook_live.php` → booking confirmation |
 
-1. Install dependencies:
+## Environment
 
-   ```powershell
-   npm install
-   ```
-
-2. Copy `.env.example` to `.env`.
-
-3. Paste your generated access token into:
-
-   ```env
-   WHATSAPP_TOKEN=
-   ```
-
-4. Add your Meta app secret:
-
-   ```env
-   META_APP_SECRET=
-   ```
-
-5. Choose your own webhook verify token:
-
-   ```env
-   WHATSAPP_VERIFY_TOKEN=some_random_private_text
-   ```
-
-6. Start the server:
-
-   ```powershell
-   npm run dev
-   ```
-
-7. For local tunnel testing, expose port `3000` with a tunnel tool.
-
-8. In Meta Developer App, configure the webhook using the public HTTPS URL:
-
-   ```text
-   Callback URL: https://your-public-url/webhook
-   Verify token: same value as WHATSAPP_VERIFY_TOKEN
-   Webhook field: messages
-   ```
-
-## Vercel Deployment
-
-This project is ready for Vercel. It exposes these serverless-compatible routes:
-
-```text
-/health
-/webhook
-/send-template
-```
-
-Set these Vercel Environment Variables before deploying:
+Same keys locally (`.env`) and in Vercel. See [.env.example](.env.example) for the
+full annotated list; the required ones:
 
 ```env
 GRAPH_API_VERSION=v25.0
-WHATSAPP_TOKEN=your_generated_access_token
-WHATSAPP_PHONE_NUMBER_ID=1107576985771392
-WHATSAPP_WABA_ID=2850166098660100
-WHATSAPP_VERIFY_TOKEN=your_private_verify_token
-META_APP_SECRET=your_meta_app_secret
+WHATSAPP_TOKEN=            # permanent token; temp ones expire in 24h (OAuthException 190)
+WHATSAPP_PHONE_NUMBER_ID=
+WHATSAPP_WABA_ID=
+WHATSAPP_VERIFY_TOKEN=     # any random string, mirrored in Meta
+META_APP_SECRET=
 VALIDATE_META_SIGNATURE=true
+FLOW_ID=                   # from Flow Builder
+FLOW_PRIVATE_KEY=          # PEM as one line with \n escapes
+FLOW_KEY_PASSPHRASE=
+PAYMENT_NOTIFY_SECRET=     # shared with v2_webhook_live.php
 ```
 
-After deployment, use this in Meta:
+Never commit real values. `.env` is gitignored.
+
+## Run locally
+
+```powershell
+npm install; npm run dev
+```
+
+Expose port 3000 with a tunnel, then point Meta at `https://<tunnel>/webhook`.
+
+## Deploy
+
+Vercel project `whatsapp-test-webhook`, auto-deploys from `main`
+(https://whatsapp-test-webhook.vercel.app). Framework preset **Other**, no build
+command, no output directory. Add the env vars above, then **redeploy** — env
+changes don't apply to existing deployments.
+
+In Meta → WhatsApp → Configuration:
 
 ```text
-Callback URL: https://your-vercel-project.vercel.app/webhook
-Verify token: same value as WHATSAPP_VERIFY_TOKEN
-Webhook field: messages
+Callback URL:  https://whatsapp-test-webhook.vercel.app/webhook
+Verify token:  same as WHATSAPP_VERIFY_TOKEN
+Fields:        messages (+ smb_message_echoes on coexistence numbers)
 ```
-
-For GitHub import and Vercel dashboard steps, see `DEPLOYMENT.md`.
 
 ## Test
 
-Send `Hi` from your verified personal WhatsApp recipient to the Meta test number.
-
-Expected result:
-
-1. The server logs the inbound message.
-2. WhatsApp receives a welcome text.
-3. WhatsApp receives buttons: `Book Turf`, `View Slots`, `Contact Staff`.
-
-This project is intentionally separate from the booking app. Booking availability, holds, and payment links should be connected only after this basic webhook flow works.
+Message the number `Hi` from an allowed recipient. Expect a greeting plus three
+buttons: **Book a Slot**, **My Bookings**, **Chat with Venue**. Watch Vercel →
+Deployments → Functions → Logs.
