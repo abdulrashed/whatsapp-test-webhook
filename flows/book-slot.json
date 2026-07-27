@@ -98,7 +98,10 @@
               "title": { "type": "string" }
             }
           },
-          "__example__": [{ "id": "court1", "title": "Court 1" }]
+          "__example__": [
+            { "id": "court1", "title": "Court 1" },
+            { "id": "court2", "title": "Court 2" }
+          ]
         },
         "sport_name": { "type": "string", "__example__": "Football" },
         "date": { "type": "string", "__example__": "2026-07-26" }
@@ -107,10 +110,11 @@
         "type": "SingleColumnLayout",
         "children": [
           {
-            "type": "RadioButtonsGroup",
+            "type": "ChipsSelector",
             "name": "court",
             "label": "Court",
             "required": true,
+            "max-selected-items": 1,
             "data-source": "${data.courts}"
           },
           {

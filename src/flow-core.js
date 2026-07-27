@@ -112,7 +112,8 @@ async function dateScreen(venueId, acc) {
 async function courtOrTimeScreen(venueId, acc) {
   const courts = await fetchCourtDetails(venueId);
   const active = courts.filter((c) => c.status !== "inactive");
-  if (active.length <= 1) {
+  // A lone court is not a choice, and chips need MIN_CHIPS to render at all.
+  if (active.length < MIN_CHIPS) {
     const court = active[0] || courts[0];
     if (!court) return infoScreen("No courts available at this venue.");
     return timeScreen(venueId, { ...acc, court_id: court.id, court_name: court.name });
@@ -120,7 +121,7 @@ async function courtOrTimeScreen(venueId, acc) {
   return {
     screen: "COURT",
     data: {
-      courts: active.map((c) => ({ id: c.id, title: c.name })),
+      courts: active.slice(0, MAX_CHIPS).map((c) => ({ id: c.id, title: c.name })),
       sport_name: acc.sport_name,
       date: acc.date
     }
@@ -268,8 +269,11 @@ export async function handleFlowRequest(body) {
       }
       case "DATE":
         return courtOrTimeScreen(venueId, { ...acc, date: normalizeDate(acc.date) });
-      case "COURT":
-        return timeScreen(venueId, acc);
+      case "COURT": {
+        const courtId = firstOf(acc.court_id);
+        if (!courtId) return infoScreen("Please pick a court to continue.");
+        return timeScreen(venueId, { ...acc, court_id: courtId });
+      }
       case "TIME":
         return durationScreen(acc);
       case "DURATION":
