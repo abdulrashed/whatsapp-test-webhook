@@ -53,7 +53,8 @@
       "id": "DATE",
       "title": "Select a date",
       "data": {
-        "g1_label": { "type": "string", "__example__": "July 2026" },
+        "g1_label": { "type": "string", "__example__": "July – August 2026" },
+        "g1_required": { "type": "boolean", "__example__": true },
         "g1_days": {
           "type": "array",
           "items": {
@@ -129,7 +130,7 @@
             "type": "ChipsSelector",
             "name": "date_g1",
             "label": "${data.g1_label}",
-            "required": false,
+            "required": "${data.g1_required}",
             "max-selected-items": 1,
             "data-source": "${data.g1_days}",
             "on-select-action": {
@@ -270,6 +271,7 @@
           ]
         },
         "am_label": { "type": "string", "__example__": "Start time" },
+        "am_required": { "type": "boolean", "__example__": true },
         "pm_label": { "type": "string", "__example__": " " },
         "am_visible": { "type": "boolean", "__example__": true },
         "pm_visible": { "type": "boolean", "__example__": false },
@@ -286,7 +288,7 @@
             "name": "start_time_am",
             "label": "${data.am_label}",
             "visible": "${data.am_visible}",
-            "required": false,
+            "required": "${data.am_required}",
             "max-selected-items": 1,
             "data-source": "${data.times_am}",
             "on-select-action": {

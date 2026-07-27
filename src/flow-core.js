@@ -145,6 +145,27 @@ function buildDateChipGroups(daysCount) {
     cursor.setDate(cursor.getDate() + 1);
   }
 
+  // Flow JSON cannot link two selectors, so a window split across groups can be
+  // tapped once per group. Whenever the whole window fits in one selector, use
+  // one — that makes a single date structurally impossible to violate, and lets
+  // the group be `required` (Meta prints "(Optional)" beside every label that
+  // isn't). Days past the first month carry their month so nothing is ambiguous.
+  const total = byMonth.reduce((n, m) => n + m.days.length, 0);
+  if (total <= CHIPS_PER_GROUP) {
+    const [first, ...rest] = byMonth;
+    return [{
+      // "July – August 2026" when the window straddles a month, else "July 2026".
+      label: rest.length
+        ? `${first.label.replace(/ \d{4}$/, "")} – ${byMonth[byMonth.length - 1].label}`
+        : first.label,
+      monthKey: first.key,
+      days: [
+        ...first.days,
+        ...rest.flatMap((m) => m.days.map((d) => ({ ...d, title: `${d.title} ${monthAbbrOf(d.id)}` })))
+      ]
+    }];
+  }
+
   const groups = [];
   for (const month of byMonth) {
     for (let i = 0; i < month.days.length; i += CHIPS_PER_GROUP) {
@@ -196,7 +217,11 @@ async function dateScreen(venueId, acc) {
     return courtOrTimeScreen(venueId, { ...acc, date: groups[0].days[0].id });
   }
 
-  const data = { sport_name: acc.sport_name };
+  // Meta labels every non-required field "(Optional)", which is wrong here —
+  // there is no footer, so a date must be chosen. It can only be marked
+  // required when it is the sole group, otherwise picking a date in a later
+  // month would leave the required one empty and block the tap.
+  const data = { sport_name: acc.sport_name, g1_required: groups.length === 1 };
   for (let i = 0; i < DATE_CHIP_GROUPS; i++) {
     const group = groups[i];
     const n = i + 1;
@@ -251,6 +276,7 @@ async function timeScreen(venueId, acc) {
       times_pm: second?.items || UNUSED_CHIPS,
       am_label: first.label,
       pm_label: second?.label || " ",
+      am_required: !second,
       am_visible: true,
       pm_visible: Boolean(second),
       sport_name: acc.sport_name,
