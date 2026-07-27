@@ -52,14 +52,13 @@ See [FLOW_SETUP.md](FLOW_SETUP.md) for the exact commands.
 - Every selection is a `ChipsSelector` and every one advances on tap
   (`on-select-action`). No selection screen has a footer; only SUMMARY and INFO
   do. That makes each selection mandatory — there is no other way forward.
-- **One chip group per screen, and it is `required`.** Required is what stops
-  Meta printing "(Optional)" beside the label; a single group can carry it
-  safely because the tap that fires the action is the tap that fills the field.
-- **Never put two chip groups on one screen.** They are independent fields:
-  each holds its own selection (two dates at once), and only one of them can be
-  required — a required-but-empty field makes the form invalid, and Flows
-  silently swallow `on-select-action` on an invalid form, so the other group
-  stops responding. This, not the chips, is what froze DATE before.
+- **Never mark a chip group `required`.** A
+  required-but-empty field makes the form invalid, and Flows silently swallow
+  `on-select-action` on an invalid form. Only one date is ever picked, so with
+  several required groups the rest stay empty, the form can never become valid,
+  and the whole screen stops responding. This is what froze DATE before, not
+  the chips themselves — an earlier comment in this repo claimed the form only
+  had to be "satisfiable", which is wrong.
 - A `ChipsSelector` needs 2–20 options at runtime, not just in preview. Hence
   the endpoint skipping a screen whose list has one entry (single-sport venue,
   single court, one free slot), capping at 20, and padding hidden groups.
@@ -67,10 +66,9 @@ See [FLOW_SETUP.md](FLOW_SETUP.md) for the exact commands.
   the value goes downstream.
 - Chips-per-row is not settable; a wide label is what puts a duration on its own
   row. Shortening those titles silently repacks them two-up.
-- DATE is therefore **one** group, which caps the booking window at 20 days
-  however large `days_count` is (clamping is logged). Only `CalendarPicker`
-  holds one date across an unlimited range — the trade is chips vs. the full
-  window.
+- DATE declares 4 fixed chip groups (Flow JSON cannot repeat a component over
+  an array), one per calendar month and chunked at 20, with the window clamped
+  to 31 days so it never needs a fifth. Unused groups are hidden and padded.
 - Deselecting a chip fires the same `on-select-action` with an empty array, so
   the endpoint treats it as "nothing picked" and answers with INFO. A screen
   cannot re-render itself — Meta rejects a self-route as a loop.
