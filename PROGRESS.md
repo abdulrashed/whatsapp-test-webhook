@@ -49,8 +49,18 @@ See [FLOW_SETUP.md](FLOW_SETUP.md) for the exact commands.
   "Something went wrong".
 - A Flow screen may never route to itself — Meta rejects it as a routing loop.
 - One invalid component blocks every action on its screen, even when hidden.
-- The screens are plain form components (radio buttons, a `DatePicker`, a
-  dropdown) with a `Next` footer each. A one-tap `ChipsSelector` version was
-  tried and reverted: chips are capped at 2–20 options, cannot express "one
-  date across several months", and any group left empty froze the screen.
-- `DatePicker` bounds are epoch-millis strings; an ISO `min-date` is ignored.
+- Every selection is a `ChipsSelector`, but navigation stays on a `Next` footer.
+  An earlier version navigated from `on-select-action` instead and had to be
+  abandoned — a form Flows consider invalid swallows that action silently, so a
+  single bad component froze the screen with no way forward.
+- A `ChipsSelector` needs 2–20 options at runtime, not just in preview. Hence
+  the endpoint skipping a screen whose list has one entry (single-sport venue,
+  single court, one free slot), capping at 20, and padding hidden groups.
+- Chips submit an **array** even under `max-selected-items: 1` — unwrap before
+  the value goes downstream.
+- Chips-per-row is not settable; a wide label is what puts a duration on its own
+  row. Shortening those titles silently repacks them two-up.
+- DATE splits its window across two groups, and only one may be `required` — a
+  required group blocks the footer for anyone choosing from the other, so a
+  split window leaves both optional and lets the endpoint reject an empty
+  submit.

@@ -56,20 +56,58 @@
       "id": "DATE",
       "title": "Select a date",
       "data": {
-        "min_date": { "type": "string", "__example__": "1785196800000" },
-        "max_date": { "type": "string", "__example__": "1787788800000" },
+        "g1_label": { "type": "string", "__example__": "July" },
+        "g1_required": { "type": "boolean", "__example__": true },
+        "g1_days": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" }
+            }
+          },
+          "__example__": [
+            { "id": "2026-07-28", "title": "Tue 28" },
+            { "id": "2026-07-29", "title": "Wed 29" }
+          ]
+        },
+        "g2_label": { "type": "string", "__example__": "August" },
+        "g2_visible": { "type": "boolean", "__example__": true },
+        "g2_days": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" }
+            }
+          },
+          "__example__": [
+            { "id": "2026-08-12", "title": "Wed 12" },
+            { "id": "2026-08-13", "title": "Thu 13" }
+          ]
+        },
         "sport_name": { "type": "string", "__example__": "Football" }
       },
       "layout": {
         "type": "SingleColumnLayout",
         "children": [
           {
-            "type": "DatePicker",
-            "name": "date",
-            "label": "Date",
-            "required": true,
-            "min-date": "${data.min_date}",
-            "max-date": "${data.max_date}"
+            "type": "ChipsSelector",
+            "name": "date_1",
+            "label": "${data.g1_label}",
+            "required": "${data.g1_required}",
+            "max-selected-items": 1,
+            "data-source": "${data.g1_days}"
+          },
+          {
+            "type": "ChipsSelector",
+            "name": "date_2",
+            "label": "${data.g2_label}",
+            "visible": "${data.g2_visible}",
+            "max-selected-items": 1,
+            "data-source": "${data.g2_days}"
           },
           {
             "type": "Footer",
@@ -78,7 +116,8 @@
               "name": "data_exchange",
               "payload": {
                 "sport_name": "${data.sport_name}",
-                "date": "${form.date}"
+                "date_g1": "${form.date_1}",
+                "date_g2": "${form.date_2}"
               }
             }
           }
