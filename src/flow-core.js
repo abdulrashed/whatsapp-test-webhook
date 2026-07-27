@@ -309,35 +309,41 @@ export async function handleFlowRequest(body) {
 
   if (action === "data_exchange") {
     switch (screen) {
+      // The guards below are belt-and-braces: these screens use a
+      // RadioButtonsGroup whose on-select-action only fires on a selection, so
+      // an empty value shouldn't reach us. They must not re-return their own
+      // screen — Meta rejects a routing model where a screen routes to itself.
       case "SPORT": {
         const sportName = firstOf(acc.sport_name);
-        if (!sportName) return sportScreen(venueId);
+        if (!sportName) return infoScreen("Please pick a sport to continue.");
         return dateScreen(venueId, { ...acc, sport_name: sportName });
       }
       case "DATE": {
         // ChipsSelector has no on-select-action, so DATE uses a Footer that
         // submits all group fields; the chosen day is in whichever is non-empty.
-        // No selection (footer tapped early) → redraw DATE.
         const raw = firstOf(acc.date_g1) || firstOf(acc.date_g2)
           || firstOf(acc.date_g3) || firstOf(acc.date_g4);
-        const date = normalizeDate(raw);
-        if (!date) return dateScreen(venueId, acc);
+        // Tapping Next with nothing selected can't redraw DATE — Meta rejects a
+        // screen that routes to itself ("Loop detected in the routing model").
+        // Fall back to today, the first chip on the screen, so the customer
+        // still lands somewhere sensible and can go Back to change it.
+        const date = normalizeDate(raw) || dateStr(new Date());
         return courtOrTimeScreen(venueId, { ...acc, date });
       }
       case "COURT": {
         const courtId = firstOf(acc.court_id);
-        if (!courtId) return courtOrTimeScreen(venueId, acc);
+        if (!courtId) return infoScreen("Please pick a court to continue.");
         return timeScreen(venueId, { ...acc, court_id: courtId });
       }
       case "TIME": {
-        // Slots are split across a morning and an afternoon/evening chip group.
+        // Slots are split across a morning and an afternoon/evening group.
         const startTime = firstOf(acc.start_time_am) || firstOf(acc.start_time_pm);
-        if (!startTime) return timeScreen(venueId, acc);
+        if (!startTime) return infoScreen("Please pick a start time to continue.");
         return durationScreen({ ...acc, start_time: startTime });
       }
       case "DURATION": {
         const duration = firstOf(acc.duration);
-        if (!duration) return durationScreen(acc);
+        if (!duration) return infoScreen("Please pick a duration to continue.");
         return summaryScreen(await fetchVenueDetails(venueId), { ...acc, duration });
       }
       default:

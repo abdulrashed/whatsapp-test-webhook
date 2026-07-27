@@ -3,7 +3,7 @@
   "data_api_version": "3.0",
   "routing_model": {
     "SPORT": ["DATE", "INFO"],
-    "DATE": ["DATE", "COURT", "TIME", "INFO"],
+    "DATE": ["COURT", "TIME", "INFO"],
     "COURT": ["TIME", "INFO"],
     "TIME": ["DURATION", "INFO"],
     "DURATION": ["SUMMARY", "INFO"],
@@ -106,7 +106,7 @@
         "children": [
           {
             "type": "TextCaption",
-            "text": "Tap one date, then Next."
+            "text": "Tap a date, then Next. Defaults to today."
           },
           {
             "type": "ChipsSelector",
