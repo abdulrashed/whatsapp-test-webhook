@@ -142,7 +142,7 @@ async function timeScreen(venueId, acc) {
   }
   // The only free slot is not a choice, and chips will not render it alone.
   if (times.length < MIN_CHIPS) {
-    return durationScreen({ ...acc, court_name: courtName, start_time: times[0].slot_time });
+    return durationScreen(venueId, { ...acc, court_name: courtName, start_time: times[0].slot_time });
   }
   // Slots are hourly, so a day holds at most 24 and all but a round-the-clock
   // venue fits. Truncating loses bookable hours, so say so in the logs.
@@ -168,10 +168,12 @@ async function timeScreen(venueId, acc) {
 
 // Offer only durations whose whole span is still free (re-checked live).
 //
-// Stays a RadioButtonsGroup rather than chips: chips wrap several to a row and
-// clip anything long, and each option here has to carry its end time and price.
-// A radio list gives every option its own full-width row.
-async function durationScreen(acc) {
+// Rendered as chips, one per row. Flow JSON has no chips-per-row setting — a
+// ChipsSelector wraps to fill the width — so the row break comes from the label
+// itself: "2 hours · till 8 AM · ₹600" is wide enough that a second chip cannot
+// fit beside it. Keep the end time and price in the title for that reason as
+// much as for what they say; shortening it packs two to a row again.
+async function durationScreen(venueId, acc) {
   const durations = [];
   for (let h = 1; h <= MAX_DURATION_HOURS; h++) {
     const end = addMinutes(acc.start_time, h * 60);
@@ -187,6 +189,13 @@ async function durationScreen(acc) {
   }
   if (!durations.length) {
     return infoScreen("That start time is no longer available. Please try another.");
+  }
+  // Only one length fits before the next booking — chips will not draw a lone
+  // option, and it is no choice anyway. The summary still shows it before
+  // anyone pays.
+  if (durations.length < MIN_CHIPS) {
+    const venue = await fetchVenueDetails(venueId);
+    return summaryScreen(venue, { ...acc, duration: durations[0].id });
   }
   return {
     screen: "DURATION",
@@ -300,7 +309,7 @@ export async function handleFlowRequest(body) {
       case "TIME": {
         const startTime = firstOf(acc.start_time);
         if (!startTime) return infoScreen("Please pick a start time to continue.");
-        return durationScreen({ ...acc, start_time: startTime });
+        return durationScreen(venueId, { ...acc, start_time: startTime });
       }
       case "DURATION": {
         const duration = firstOf(acc.duration);

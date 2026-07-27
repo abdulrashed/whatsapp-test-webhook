@@ -3,9 +3,9 @@
   "data_api_version": "3.0",
   "routing_model": {
     "SPORT": ["DATE", "INFO"],
-    "DATE": ["COURT", "TIME", "DURATION", "INFO"],
-    "COURT": ["TIME", "DURATION", "INFO"],
-    "TIME": ["DURATION", "INFO"],
+    "DATE": ["COURT", "TIME", "DURATION", "SUMMARY", "INFO"],
+    "COURT": ["TIME", "DURATION", "SUMMARY", "INFO"],
+    "TIME": ["DURATION", "SUMMARY", "INFO"],
     "DURATION": ["SUMMARY", "INFO"],
     "SUMMARY": [],
     "INFO": []
@@ -211,10 +211,11 @@
         "type": "SingleColumnLayout",
         "children": [
           {
-            "type": "RadioButtonsGroup",
+            "type": "ChipsSelector",
             "name": "duration",
             "label": "Duration",
             "required": true,
+            "max-selected-items": 1,
             "data-source": "${data.durations}"
           },
           {
