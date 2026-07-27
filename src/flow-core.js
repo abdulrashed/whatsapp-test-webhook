@@ -22,6 +22,11 @@ const MAX_DURATION_HOURS = 8;
 // Meta caps a ChipsSelector at 20 options.
 const CHIPS_PER_GROUP = 20;
 
+// Sanity bound on a venue's days_count, so a stray value can't render a
+// year-long calendar. CalendarPicker has no option cap, so this is the only
+// limit on how far ahead the DATE screen reaches.
+const MAX_BOOKING_DAYS = 90;
+
 // Meta refuses to render a ChipsSelector holding a single option ("dataSource
 // array must contain at least 2 options"), so no group may ever be built with
 // one chip. Where a screen has only one real choice there is nothing to decide,
@@ -36,13 +41,6 @@ const UNUSED_CHIPS = [
   { id: "__unused_1", title: "—" },
   { id: "__unused_2", title: "—" }
 ];
-const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"
-];
-const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function buildFlowToken(venueId, waId) {
   return `v1|${venueId}|${waId}`;
@@ -68,9 +66,9 @@ function firstOf(value) {
   return value;
 }
 
-// DATE chips submit "YYYY-MM-DD" directly. The older DatePicker submitted
-// epoch-millis (string) — still accepted so an in-flight Flow version keeps
-// working after a redeploy.
+// CalendarPicker in single mode submits "YYYY-MM-DD" directly, as did the date
+// chips before it. The older DatePicker submitted epoch-millis (string) — still
+// accepted so an in-flight Flow version keeps working after a redeploy.
 function normalizeDate(value) {
   const raw = firstOf(value);
   if (raw == null) return null;
@@ -89,12 +87,13 @@ function addMinutes(hhmm, minutes) {
 
 // ---- Screen builders --------------------------------------------------------
 
-// Every selection screen renders as ChipsSelector carrying an on-select-action,
-// so one tap both records the choice and advances — no screen has a "Next"
-// footer, which also makes every selection mandatory (there is no other way
-// forward). on-select-action on chips needs Flow JSON >= 7.1. Meta caps a
-// ChipsSelector at CHIPS_PER_GROUP options, so long lists (dates, time slots)
-// are split across labelled groups.
+// Every selection screen carries an on-select-action, so one tap both records
+// the choice and advances — no screen has a "Next" footer, which also makes
+// every selection mandatory (there is no other way forward). Chips are the
+// default; DATE uses a CalendarPicker because it outgrows them (see
+// buildDateWindow). on-select-action on chips needs Flow JSON >= 7.1. Meta caps
+// a ChipsSelector at CHIPS_PER_GROUP options, so the time slots are split
+// across labelled groups.
 async function sportScreen(venueId) {
   const courts = await fetchCourtDetails(venueId);
   const seen = new Map();
@@ -113,117 +112,36 @@ async function sportScreen(venueId) {
   return { screen: "SPORT", data: { sports: sports.slice(0, CHIPS_PER_GROUP) } };
 }
 
-// Builds the open days as chip groups: one group per calendar month, split
-// again whenever a month exceeds CHIPS_PER_GROUP. Only the first chunk of a
-// month carries the month heading so a split month still reads as one block.
-function buildDateChipGroups(daysCount) {
+// The bookable window, as the calendar's bounds.
+//
+// DATE is the one screen that cannot be chips. It has to show every open day —
+// more than the 20 a ChipsSelector holds — and a selector per month does not
+// work: Flow JSON has no way to link two selectors into one selection, so each
+// month would be separately selectable, only one of them could be `required`
+// (Meta prints "(Optional)" beside every label that isn't), and marking one
+// required blocks the tap on all the others, because a required-but-empty field
+// makes the form invalid and Flows silently swallow on-select-action on an
+// invalid form. CalendarPicker lays the months out itself and holds exactly one
+// date across all of them, with no option cap and nothing else on the screen to
+// invalidate the tap that fills it.
+function buildDateWindow(daysCount) {
   const span = Math.min(Math.max(Number(daysCount) || 30, 1), MAX_BOOKING_DAYS);
-  const byMonth = [];
-  const cursor = new Date();
-  cursor.setHours(0, 0, 0, 0);
-
-  for (let i = 0; i < span; i++) {
-    const key = `${cursor.getFullYear()}-${cursor.getMonth()}`;
-    if (!byMonth.length || byMonth[byMonth.length - 1].key !== key) {
-      byMonth.push({
-        key,
-        label: `${MONTH_NAMES[cursor.getMonth()]} ${cursor.getFullYear()}`,
-        days: []
-      });
-    }
-    byMonth[byMonth.length - 1].days.push({
-      id: dateStr(cursor),
-      title: `${cursor.getDate()} ${WEEKDAY_NAMES[cursor.getDay()]}`
-    });
-    cursor.setDate(cursor.getDate() + 1);
-  }
-
-  // Flow JSON cannot link two selectors, so a window split across groups can be
-  // tapped once per group. Whenever the whole window fits in one selector, use
-  // one — that makes a single date structurally impossible to violate, and lets
-  // the group be `required` (Meta prints "(Optional)" beside every label that
-  // isn't). Days past the first month carry their month so nothing is ambiguous.
-  const total = byMonth.reduce((n, m) => n + m.days.length, 0);
-  if (total <= CHIPS_PER_GROUP) {
-    const [first, ...rest] = byMonth;
-    return [{
-      // "July – August 2026" when the window straddles a month, else "July 2026".
-      label: rest.length
-        ? `${first.label.replace(/ \d{4}$/, "")} – ${byMonth[byMonth.length - 1].label}`
-        : first.label,
-      monthKey: first.key,
-      days: [
-        ...first.days,
-        ...rest.flatMap((m) => m.days.map((d) => ({ ...d, title: `${d.title} ${monthAbbrOf(d.id)}` })))
-      ]
-    }];
-  }
-
-  const groups = [];
-  for (const month of byMonth) {
-    for (let i = 0; i < month.days.length; i += CHIPS_PER_GROUP) {
-      groups.push({
-        // Continuation chunks repeat no heading; the chips read as one month.
-        label: i === 0 ? month.label : " ",
-        monthKey: month.key,
-        days: month.days.slice(i, i + CHIPS_PER_GROUP)
-      });
-    }
-  }
-
-  // A window can end a day or two into the next month, leaving a stray group
-  // Meta won't render. Fold it back into the group before it, tagging the moved
-  // chips with their month so the heading above them stays truthful.
-  for (let i = groups.length - 1; i > 0; i--) {
-    const group = groups[i];
-    if (group.days.length >= MIN_CHIPS_PER_GROUP) continue;
-    const prev = groups[i - 1];
-    const moved = group.days.map((d) =>
-      group.monthKey === prev.monthKey ? d : { ...d, title: `${d.title} ${monthAbbrOf(d.id)}` }
-    );
-    if (prev.days.length + moved.length <= CHIPS_PER_GROUP) {
-      prev.days.push(...moved);
-      groups.splice(i, 1);
-    } else {
-      // The previous group is already full, so lend it chips instead.
-      while (group.days.length < MIN_CHIPS_PER_GROUP && prev.days.length > MIN_CHIPS_PER_GROUP) {
-        const lent = prev.days.pop();
-        group.days.unshift(
-          group.monthKey === prev.monthKey ? lent : { ...lent, title: `${lent.title} ${monthAbbrOf(lent.id)}` }
-        );
-      }
-    }
-  }
-  return groups.slice(0, DATE_CHIP_GROUPS);
-}
-
-function monthAbbrOf(isoDate) {
-  return MONTH_ABBR[Number(isoDate.slice(5, 7)) - 1];
+  const from = new Date();
+  from.setHours(0, 0, 0, 0);
+  const to = new Date(from);
+  to.setDate(to.getDate() + span - 1);
+  return { min: dateStr(from), max: dateStr(to) };
 }
 
 async function dateScreen(venueId, acc) {
   const venue = await fetchVenueDetails(venueId);
-  const groups = buildDateChipGroups(venue?.days_count);
-  if (!groups.length) return infoScreen("This venue isn't open for booking right now.");
-  // A one-day window can't be a chip group and isn't a choice — take it.
-  if (groups.length === 1 && groups[0].days.length < MIN_CHIPS_PER_GROUP) {
-    return courtOrTimeScreen(venueId, { ...acc, date: groups[0].days[0].id });
-  }
-
-  // Meta labels every non-required field "(Optional)", which is wrong here —
-  // there is no footer, so a date must be chosen. It can only be marked
-  // required when it is the sole group, otherwise picking a date in a later
-  // month would leave the required one empty and block the tap.
-  const data = { sport_name: acc.sport_name, g1_required: groups.length === 1 };
-  for (let i = 0; i < DATE_CHIP_GROUPS; i++) {
-    const group = groups[i];
-    const n = i + 1;
-    data[`g${n}_label`] = group?.label || " ";
-    data[`g${n}_days`] = group?.days || UNUSED_CHIPS;
-    // g1 is always rendered; the rest are hidden when unused.
-    if (n > 1) data[`g${n}_visible`] = Boolean(group);
-  }
-  return { screen: "DATE", data };
+  const { min, max } = buildDateWindow(venue?.days_count);
+  // A one-day window isn't a choice — take it.
+  if (min === max) return courtOrTimeScreen(venueId, { ...acc, date: min });
+  return {
+    screen: "DATE",
+    data: { min_date: min, max_date: max, sport_name: acc.sport_name }
+  };
 }
 
 async function courtOrTimeScreen(venueId, acc) {
@@ -435,9 +353,10 @@ export async function handleFlowRequest(body) {
         return dateScreen(venueId, { ...acc, sport_name: sportName });
       }
       case "DATE": {
-        // Each month group is its own ChipsSelector and fires independently, so
-        // only the tapped group's field is present in the payload.
-        const raw = firstOf(acc.date_g1) || firstOf(acc.date_g2)
+        // date_g1..g4 were the per-month chip groups this screen used to
+        // render; still read so a Flow published before the CalendarPicker
+        // version keeps working for anyone mid-booking.
+        const raw = firstOf(acc.date) || firstOf(acc.date_g1) || firstOf(acc.date_g2)
           || firstOf(acc.date_g3) || firstOf(acc.date_g4);
         const date = normalizeDate(raw);
         if (!date) return infoScreen("Please pick a date to continue.");

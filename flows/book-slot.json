@@ -53,43 +53,26 @@
       "id": "DATE",
       "title": "Select a date",
       "data": {
-        "date_label": { "type": "string", "__example__": "July – August 2026" },
-        "days": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string" },
-              "title": { "type": "string" }
-            }
-          },
-          "__example__": [
-            { "id": "2026-07-27", "title": "27 Mon" },
-            { "id": "2026-07-28", "title": "28 Tue" },
-            { "id": "2026-07-29", "title": "29 Wed" },
-            { "id": "2026-07-30", "title": "30 Thu" },
-            { "id": "2026-07-31", "title": "31 Fri" },
-            { "id": "2026-08-01", "title": "1 Sat Aug" },
-            { "id": "2026-08-02", "title": "2 Sun Aug" }
-          ]
-        },
+        "min_date": { "type": "string", "__example__": "2026-07-27" },
+        "max_date": { "type": "string", "__example__": "2026-08-25" },
         "sport_name": { "type": "string", "__example__": "Football" }
       },
       "layout": {
         "type": "SingleColumnLayout",
         "children": [
           {
-            "type": "ChipsSelector",
-            "name": "date",
-            "label": "${data.date_label}",
+            "type": "CalendarPicker",
+            "name": "booking_date",
+            "label": "Date",
+            "mode": "single",
             "required": true,
-            "max-selected-items": 1,
-            "data-source": "${data.days}",
+            "min-date": "${data.min_date}",
+            "max-date": "${data.max_date}",
             "on-select-action": {
               "name": "data_exchange",
               "payload": {
                 "sport_name": "${data.sport_name}",
-                "date": "${form.date}"
+                "date": "${form.booking_date}"
               }
             }
           }
