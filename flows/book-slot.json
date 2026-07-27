@@ -3,7 +3,7 @@
   "data_api_version": "3.0",
   "routing_model": {
     "SPORT": ["DATE", "INFO"],
-    "DATE": ["COURT", "TIME", "INFO"],
+    "DATE": ["DATE", "COURT", "TIME", "INFO"],
     "COURT": ["TIME", "INFO"],
     "TIME": ["DURATION", "INFO"],
     "DURATION": ["SUMMARY", "INFO"],
@@ -31,17 +31,12 @@
         "type": "SingleColumnLayout",
         "children": [
           {
-            "type": "ChipsSelector",
+            "type": "RadioButtonsGroup",
             "name": "sport",
             "label": "Sport",
-            "required": false,
-            "max-selected-items": 1,
-            "data-source": "${data.sports}"
-          },
-          {
-            "type": "Footer",
-            "label": "Next",
-            "on-click-action": {
+            "required": true,
+            "data-source": "${data.sports}",
+            "on-select-action": {
               "name": "data_exchange",
               "payload": { "sport_name": "${form.sport}" }
             }
@@ -183,17 +178,12 @@
         "type": "SingleColumnLayout",
         "children": [
           {
-            "type": "ChipsSelector",
+            "type": "RadioButtonsGroup",
             "name": "court",
             "label": "Court",
-            "required": false,
-            "max-selected-items": 1,
-            "data-source": "${data.courts}"
-          },
-          {
-            "type": "Footer",
-            "label": "Next",
-            "on-click-action": {
+            "required": true,
+            "data-source": "${data.courts}",
+            "on-select-action": {
               "name": "data_exchange",
               "payload": {
                 "sport_name": "${data.sport_name}",
@@ -242,34 +232,37 @@
         "type": "SingleColumnLayout",
         "children": [
           {
-            "type": "ChipsSelector",
+            "type": "RadioButtonsGroup",
             "name": "start_time_am",
             "label": "Morning",
             "visible": "${data.am_visible}",
             "required": false,
-            "max-selected-items": 1,
-            "data-source": "${data.times_am}"
-          },
-          {
-            "type": "ChipsSelector",
-            "name": "start_time_pm",
-            "label": "Afternoon & Evening",
-            "visible": "${data.pm_visible}",
-            "required": false,
-            "max-selected-items": 1,
-            "data-source": "${data.times_pm}"
-          },
-          {
-            "type": "Footer",
-            "label": "Next",
-            "on-click-action": {
+            "data-source": "${data.times_am}",
+            "on-select-action": {
               "name": "data_exchange",
               "payload": {
                 "sport_name": "${data.sport_name}",
                 "date": "${data.date}",
                 "court_id": "${data.court_id}",
                 "court_name": "${data.court_name}",
-                "start_time_am": "${form.start_time_am}",
+                "start_time_am": "${form.start_time_am}"
+              }
+            }
+          },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "start_time_pm",
+            "label": "Afternoon & Evening",
+            "visible": "${data.pm_visible}",
+            "required": false,
+            "data-source": "${data.times_pm}",
+            "on-select-action": {
+              "name": "data_exchange",
+              "payload": {
+                "sport_name": "${data.sport_name}",
+                "date": "${data.date}",
+                "court_id": "${data.court_id}",
+                "court_name": "${data.court_name}",
                 "start_time_pm": "${form.start_time_pm}"
               }
             }
@@ -290,7 +283,7 @@
               "title": { "type": "string" }
             }
           },
-          "__example__": [{ "id": "1", "title": "1h · ₹300" }]
+          "__example__": [{ "id": "1", "title": "1 hour · ends 7:00 AM · ₹300" }]
         },
         "sport_name": { "type": "string", "__example__": "Football" },
         "date": { "type": "string", "__example__": "2026-07-26" },
@@ -302,17 +295,12 @@
         "type": "SingleColumnLayout",
         "children": [
           {
-            "type": "ChipsSelector",
+            "type": "RadioButtonsGroup",
             "name": "duration",
             "label": "Duration",
-            "required": false,
-            "max-selected-items": 1,
-            "data-source": "${data.durations}"
-          },
-          {
-            "type": "Footer",
-            "label": "Review",
-            "on-click-action": {
+            "required": true,
+            "data-source": "${data.durations}",
+            "on-select-action": {
               "name": "data_exchange",
               "payload": {
                 "sport_name": "${data.sport_name}",

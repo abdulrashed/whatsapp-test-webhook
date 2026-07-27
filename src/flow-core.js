@@ -214,8 +214,10 @@ async function durationScreen(acc) {
     if (!ok) break; // once an hour is blocked, longer spans are too
     // eslint-disable-next-line no-await-in-loop
     const { price } = await priceForSpan(acc.court_id, acc.date, acc.start_time, end);
-    // Kept short so the chips stay compact; the full span is on SUMMARY.
-    durations.push({ id: String(h), title: `${h}h · ₹${price}` });
+    durations.push({
+      id: String(h),
+      title: `${h} hour${h > 1 ? "s" : ""} · ends ${to12h(end)} · ₹${price}`
+    });
   }
   if (!durations.length) {
     return infoScreen("That start time is no longer available. Please try another.");
