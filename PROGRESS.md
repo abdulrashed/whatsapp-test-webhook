@@ -49,10 +49,9 @@ See [FLOW_SETUP.md](FLOW_SETUP.md) for the exact commands.
   "Something went wrong".
 - A Flow screen may never route to itself — Meta rejects it as a routing loop.
 - One invalid component blocks every action on its screen, even when hidden.
-- Every selection is a `ChipsSelector` and every one advances on tap
-  (`on-select-action`). No selection screen has a footer; only SUMMARY and INFO
-  do. That makes each selection mandatory — there is no other way forward.
-- **Never mark a chip group `required`.** A
+- Every selection is a `ChipsSelector`. SPORT and DATE advance on tap
+  (`on-select-action`); COURT/TIME/DURATION still use a `Next` footer.
+- **Never mark a chip group `required` on a screen that advances on tap.** A
   required-but-empty field makes the form invalid, and Flows silently swallow
   `on-select-action` on an invalid form. Only one date is ever picked, so with
   several required groups the rest stay empty, the form can never become valid,

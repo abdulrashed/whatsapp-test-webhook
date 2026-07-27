@@ -209,9 +209,14 @@
             "type": "ChipsSelector",
             "name": "court",
             "label": "Court",
+            "required": true,
             "max-selected-items": 1,
-            "data-source": "${data.courts}",
-            "on-select-action": {
+            "data-source": "${data.courts}"
+          },
+          {
+            "type": "Footer",
+            "label": "Next",
+            "on-click-action": {
               "name": "data_exchange",
               "payload": {
                 "sport_name": "${data.sport_name}",
@@ -253,9 +258,14 @@
             "type": "ChipsSelector",
             "name": "start_time",
             "label": "Start time",
+            "required": true,
             "max-selected-items": 1,
-            "data-source": "${data.times}",
-            "on-select-action": {
+            "data-source": "${data.times}"
+          },
+          {
+            "type": "Footer",
+            "label": "Next",
+            "on-click-action": {
               "name": "data_exchange",
               "payload": {
                 "sport_name": "${data.sport_name}",
@@ -300,9 +310,14 @@
             "type": "ChipsSelector",
             "name": "duration",
             "label": "Duration",
+            "required": true,
             "max-selected-items": 1,
-            "data-source": "${data.durations}",
-            "on-select-action": {
+            "data-source": "${data.durations}"
+          },
+          {
+            "type": "Footer",
+            "label": "Review",
+            "on-click-action": {
               "name": "data_exchange",
               "payload": {
                 "sport_name": "${data.sport_name}",

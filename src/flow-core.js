@@ -13,15 +13,9 @@ import { logInfo, logWarn } from "./logger.js";
 // api/flow.js (crypto/HTTP) so it can be unit-tested without encryption.
 //
 // The Flow runs in data_exchange mode: WhatsApp calls INIT to get the first
-// screen, then each chip tap posts a data_exchange carrying the running
-// selection in its payload, so the endpoint stays stateless per request.
-// flow_token carries venue + user identity: "v1|<venueId>|<waId>".
-//
-// One tap both records the choice and advances, so no selection screen has a
-// footer and every selection is effectively mandatory — there is no other way
-// forward. That also means no chip group may be marked `required`: a required
-// field left empty makes the form invalid, and Flows silently swallow
-// on-select-action on an invalid form.
+// screen, then each screen's Footer posts a data_exchange with the running
+// selection accumulated in its payload, so the endpoint stays stateless per
+// request. flow_token carries venue + user identity: "v1|<venueId>|<waId>".
 
 const MAX_DURATION_HOURS = 8;
 
