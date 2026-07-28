@@ -1,7 +1,6 @@
 import {
   addDoc,
   collection,
-  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -225,26 +224,6 @@ export async function addToBlockConcurrentBookings(startTime, endTime, userId, d
   } catch (error) {
     logError("addToBlockConcurrentBookings failed", { courtId, date, error: error?.message });
     return null;
-  }
-}
-
-export async function deleteUserBlockForCourt(userId, courtId, date) {
-  if (!userId || !courtId || !date) return false;
-  try {
-    const q = query(
-      collection(db, "block_concurrent"),
-      where("userId", "==", userId),
-      where("courtId", "==", courtId),
-      where("date", "==", date)
-    );
-    const snap = await getDocs(q);
-    for (const d of snap.docs) {
-      await deleteDoc(doc(db, "block_concurrent", d.id));
-    }
-    return true;
-  } catch (error) {
-    logError("deleteUserBlockForCourt failed", { userId, courtId, date, error: error?.message });
-    return false;
   }
 }
 

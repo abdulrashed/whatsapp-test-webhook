@@ -1,8 +1,9 @@
 # Meta setup for the booking Flow
 
-The code is built and deployed; these are the Meta-side steps only the account
-owner can do. Do them on the **test number** first — step 3 ties a key to a
-number. Base URL: `https://whatsapp-test-webhook.vercel.app`
+Steps 1–6 are **already done on the test number** and the Flow works end to end.
+Keep this as the runbook for bringing up a *new* number or venue — step 3 ties a
+key to a single number, so each one repeats it. Base URL:
+`https://whatsapp-test-webhook.vercel.app`
 
 Prerequisites: the webhook already replies with the menu, you know the
 **Phone Number ID**, `WHATSAPP_TOKEN` in Vercel is valid, and `openssl` is
@@ -51,15 +52,22 @@ awk 'NF {sub(/\r/, ""); printf "%s\\n", $0;}' flow_private.pem
 
 ## 5. Map the number to a venue
 
-`book_slot` resolves the venue from Firestore:
+The venue is resolved from its own `venue_details` doc — there is no separate
+mapping collection. The doc carries the WhatsApp number that serves it:
 
 ```text
-wa_numbers/{PHONE_NUMBER_ID} = { venueId: "<venue_details doc id>", venueName: "Legend Arena" }
+venue_details/{venueId} = { name: "LEGENDS ARENA", phone_number_id: "<PHONE_NUMBER_ID>", ... }
 ```
 
-Until this exists, "Book a Slot" replies "not set up yet" by design. Seed it from
-the Firebase console for `turf-app-930c5`, or ask the developer with the Phone
-Number ID + venue id.
+Seed it with the helper, which prints the matching venue first and only writes
+with `--write`:
+
+```bash
+node scripts/set-venue-phone-number.js "legends" <PHONE_NUMBER_ID> --write
+```
+
+Until this field exists, "Book a Slot" replies "not set up yet" by design and the
+greeting falls back to `VENUE_NAME`.
 
 ## 6. Test
 
@@ -75,7 +83,7 @@ Number ID + venue id.
 |---|---|
 | Health check fails, "Decryption failed" (421) | Public key not uploaded/mismatched, or wrong `FLOW_KEY_PASSPHRASE` |
 | "Signature verification failed" (432) | Wrong `META_APP_SECRET` / `VALIDATE_META_SIGNATURE` |
-| "Book a Slot" says not set up | `FLOW_ID` missing or `wa_numbers` not seeded |
+| "Book a Slot" says not set up | `FLOW_ID` missing, or no `venue_details` doc carries this `phone_number_id` |
 | "Something went wrong" in the Flow | Flow JSON in Builder is out of sync with the deployed endpoint — re-push **and** re-publish |
 | Empty screen | No availability (INFO screen) or a Firestore read failed — check `/flow` logs |
 | No reply at all | Expired `WHATSAPP_TOKEN` (`OAuthException 190`) |

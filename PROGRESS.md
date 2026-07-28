@@ -1,46 +1,45 @@
 # Status
 
-Last updated: July 27, 2026 · Repo `E:\MyFiles\Rahman\WhatsApp` →
+Last updated: July 28, 2026 · Repo `E:\MyFiles\Rahman\WhatsApp` →
 https://github.com/abdulrashed/whatsapp-test-webhook → Vercel
 `whatsapp-test-webhook` (auto-deploy from `main`).
 
-## Built and deployed
+**The booking Flow is live and working end to end on the test number**: menu →
+Book a Slot → sport → date → court → time → duration → summary → Pay Now.
 
-- **Menu** — one interactive message: Book a Slot / My Bookings / Chat with Venue.
+## Working
+
+- **Menu** — one interactive message: Book a Slot / My Bookings / Chat with
+  Venue.
 - **Sessions & venues** — `src/session.js` (`wa_sessions`), `src/venues.js`
-  (`wa_numbers/{phone_number_id}` → venue). Human-handoff silence via
-  `smb_message_echoes`. All Firestore ops fail open.
+  (venue resolved from `venue_details.phone_number_id`). Human-handoff silence
+  via `smb_message_echoes`. All Firestore ops fail open.
 - **Booking data layer** — `src/booking.js`: availability, pricing, holds,
   `processing` bookings. No finance/coupon logic — the PHP webhook owns money.
 - **Flow** — `src/flow-crypto.js`, `src/flow-core.js` (screen router),
-  `api/flow.js`, `flows/book-slot.json`. Sport → date → court → time → duration
-  → summary, then a Razorpay Pay Now link (`src/payments.js`).
-- **Payment confirmation** — `api/payment-notify.js`, HMAC-verified, deduped via
-  `wa_confirmation_sent_at`. Needs the PHP call added (FLOW_SETUP.md §7).
+  `api/flow.js`, `flows/book-slot.json`. Encryption verified both ways (Flow
+  Builder health check green); Flow created, published, `FLOW_ID` and the RSA
+  keypair set in Vercel; the venue's `phone_number_id` is seeded.
+- **Payment** — Razorpay order via the existing PHP endpoint, Pay Now CTA to the
+  hosted checkout page (`src/payments.js`).
 
 Verified against live Firestore `turf-app-930c5`.
 
-## Remaining — Meta side (only the account owner can do these)
+## Remaining
 
-1. Create + publish the Flow from `flows/book-slot.json`; set `FLOW_ID`.
-2. Generate the RSA keypair, upload the public key, set `FLOW_PRIVATE_KEY` /
-   `FLOW_KEY_PASSPHRASE`; point the Flow endpoint at `/flow`.
-3. Seed `wa_numbers/{phone_number_id}` with the venue.
-4. Confirm `WHATSAPP_TOKEN` in Vercel Production is valid and permanent.
-
-See [FLOW_SETUP.md](FLOW_SETUP.md) for the exact commands.
-
-## Not built
-
-- **My Bookings** UI (`fetchUpcomingBookings` exists, no screens).
-- **`booking_confirmed` template** — only needed for sends >24h after the
-  customer's last message (reminders, late captures).
+- **PHP edit** in the GameOn backend: `v2_webhook_live.php` → POST
+  `/payment-notify` after capture (FLOW_SETUP.md §7). Until this lands the
+  booking is paid but no WhatsApp confirmation goes out. The only external
+  change still required.
+- **My Bookings** UI — the button replies with a placeholder;
+  `fetchUpcomingBookings` exists, no screens.
 - **Stale-booking sweep** — a booking whose payment never captures stays
   `processing` forever.
-- **PHP edit** in the GameOn backend: `v2_webhook_live.php` → POST
-  `/payment-notify` after capture. The only external change still required.
-- **Coexistence onboarding** for the real venue number (test number is a plain
-  Cloud API number).
+- **`booking_confirmed` template** — only needed for sends >24h after the
+  customer's last message (reminders, late captures).
+- **Coexistence onboarding** for the real venue number (the test number is a
+  plain Cloud API number, and the `smb_message_echoes` payload shape is still
+  unverified against a live coexistence account).
 
 ## Known gotchas
 
