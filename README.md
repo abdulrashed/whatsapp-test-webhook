@@ -18,6 +18,11 @@ interactive message — *Book a Slot* / *My Bookings* / *Chat with Venue*
 resolved from the `phone_number_id` that received the message, so one deployment
 serves many venues ([src/venues.js](src/venues.js)).
 
+**1b. List upcoming bookings.** *My Bookings* replies with the customer's
+confirmed future bookings, soonest first, across every venue they have booked —
+not just the one they are messaging. Only `booking_type: "online"` counts, so an
+abandoned checkout never appears ([src/booking.js](src/booking.js)).
+
 **2. Step back when a human takes over.** *Chat with Venue* puts the
 conversation in `human` mode and the bot goes quiet. Under coexistence, an owner
 replying from the WhatsApp Business app arrives as an `smb_message_echoes` event

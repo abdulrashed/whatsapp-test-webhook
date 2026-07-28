@@ -22,6 +22,9 @@ Book a Slot → sport → date → court → time → duration → summary → P
   keypair set in Vercel; the venue's `phone_number_id` is seeded.
 - **Payment** — Razorpay order via the existing PHP endpoint, Pay Now CTA to the
   hosted checkout page (`src/payments.js`).
+- **My Bookings** — `fetchUpcomingBookings` + `buildUpcomingBookingsText`, soonest
+  first, across every venue the customer has booked. Verified against real
+  `turf-app-930c5` bookings.
 
 Verified against live Firestore `turf-app-930c5`.
 
@@ -31,8 +34,6 @@ Verified against live Firestore `turf-app-930c5`.
   `/payment-notify` after capture (FLOW_SETUP.md §7). Until this lands the
   booking is paid but no WhatsApp confirmation goes out. The only external
   change still required.
-- **My Bookings** UI — the button replies with a placeholder;
-  `fetchUpcomingBookings` exists, no screens.
 - **Stale-booking sweep** — a booking whose payment never captures stays
   `processing` forever.
 - **`booking_confirmed` template** — only needed for sends >24h after the
@@ -60,6 +61,12 @@ Verified against live Firestore `turf-app-930c5`.
   the value goes downstream.
 - Chips-per-row is not settable; a wide label is what puts a duration on its own
   row. Shortening those titles silently repacks them two-up.
+- Firestore has a composite index on `bookings(user_id, date)` but **not** one
+  covering a `date >=` range alongside it. My Bookings therefore filters to
+  upcoming in memory; adding a server-side range filter needs a new index, and a
+  missing index shows up as an empty list rather than an error.
+- Single-court venues store `court_name` identical to `venue_name`, so booking
+  copy has to collapse the two rather than print "Legends Arena · LEGENDS ARENA".
 - DATE splits its window across two groups, and only one may be `required` — a
   required group blocks the footer for anyone choosing from the other, so a
   split window leaves both optional and lets the endpoint reject an empty

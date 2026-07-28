@@ -8,8 +8,9 @@ const COLLECTION = "venue_details";
 
 // Venue names are stored in upper case (e.g. "LEGENDS ARENA"). Title-case them
 // for display so the WhatsApp greeting reads "Legends Arena". Display only —
-// the stored value is untouched.
-function toTitleCase(value) {
+// the stored value is untouched. Exported so booking copy renders the name the
+// same way the greeting does.
+export function toTitleCase(value) {
   return String(value)
     .toLowerCase()
     .replace(/\b\w/g, (ch) => ch.toUpperCase());

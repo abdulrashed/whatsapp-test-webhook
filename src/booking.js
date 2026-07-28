@@ -28,6 +28,11 @@ import { logError, logWarn } from "./logger.js";
 
 const HOLD_DURATION_MS = 5 * 60 * 1000; // matches FEATURES.SLOT_HOLD_DURATION_MINUTES
 
+// How many of a user's most recent booking docs "My Bookings" pulls before
+// filtering to the upcoming ones in memory. Comfortably more future bookings
+// than any real player holds, while keeping the billed reads per tap small.
+const SCAN_LIMIT = 60;
+
 // "HH:mm" -> minutes since midnight; "24:00" is end-of-day (1440).
 function toMinutes(t) {
   if (t === "24:00") return 1440;
@@ -48,12 +53,23 @@ function dayNameFor(dateStr) {
   return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
 }
 
-function nextDateStr(dateStr) {
-  const d = new Date(`${dateStr}T00:00:00`);
-  d.setDate(d.getDate() + 1);
+function localDateStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
     d.getDate()
   ).padStart(2, "0")}`;
+}
+
+function nextDateStr(dateStr) {
+  const d = new Date(`${dateStr}T00:00:00`);
+  d.setDate(d.getDate() + 1);
+  return localDateStr(d);
+}
+
+// Booking dates are stored as local calendar days, so "today" has to be the
+// local one. toISOString() would return the UTC day, which before 05:30 IST is
+// still yesterday.
+function todayLocalStr() {
+  return localDateStr(new Date());
 }
 
 // ---------------------------------------------------------------------------
@@ -484,24 +500,43 @@ export async function markConfirmationSent(bookingId) {
 // My Bookings
 // ---------------------------------------------------------------------------
 
-// Upcoming confirmed bookings for a WhatsApp user, newest first, hiding the
+// Upcoming confirmed bookings for a WhatsApp user, soonest first, hiding the
 // cross-date dummy records. Uses waIdToUserId to match the users doc key.
+//
+// The query stays "user_id equality + date DESC" because that is the composite
+// index this Firestore already has. Adding a `date >= today` range to filter
+// server-side would need a second index (verified: failed-precondition), and a
+// missing index surfaces here as an empty list — a customer with bookings being
+// told they have none — so it is not worth the trade.
+//
+// DESC is what makes the row cap safe: future dates sort above past ones, so
+// the newest SCAN_LIMIT docs contain every upcoming booking a real player has.
+// The final ordering is then flipped in memory, because "upcoming" means the
+// next game first, not the furthest one.
+//
+// Only booking_type "online" counts as confirmed. A WhatsApp booking is written
+// as "processing" and the Razorpay webhook promotes it on capture, so an
+// abandoned checkout never shows up here. The dummy/cancelled filters run after
+// the fetch, which is why SCAN_LIMIT leaves headroom above `max` rather than
+// matching it.
 export async function fetchUpcomingBookings(waId, max = 10) {
   const userId = waIdToUserId(waId);
   try {
-    const q = query(
-      collection(db, "bookings"),
-      where("user_id", "==", userId),
-      orderBy("date", "desc"),
-      limit(max * 2)
+    const snap = await getDocs(
+      query(
+        collection(db, "bookings"),
+        where("user_id", "==", userId),
+        orderBy("date", "desc"),
+        limit(SCAN_LIMIT)
+      )
     );
-    const snap = await getDocs(q);
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = todayLocalStr();
     return snap.docs
       .map((d) => ({ id: d.id, ...d.data() }))
       .filter((b) => !b.is_dummy)
       .filter((b) => b.booking_type === "online" && b.status !== "cancelled")
       .filter((b) => b.date >= todayStr)
+      .sort((a, b) => a.date.localeCompare(b.date) || toMinutes(a.start_time) - toMinutes(b.start_time))
       .slice(0, max);
   } catch (error) {
     logError("fetchUpcomingBookings failed", { waId, error: error?.message });

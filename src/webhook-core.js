@@ -4,6 +4,7 @@ import {
   addToBlockConcurrentBookings,
   createProcessingBooking,
   fetchCourtDetails,
+  fetchUpcomingBookings,
   fetchUserById,
   fetchVenueDetails,
   isBookingSlotAvailable,
@@ -18,7 +19,13 @@ import { logError, logInfo, logWarn } from "./logger.js";
 import { buildCheckoutUrl, createOrder } from "./payments.js";
 import { getSession, isHumanMode, setMode } from "./session.js";
 import { resolveVenue } from "./venues.js";
-import { sendCtaUrl, sendFlowMessage, sendMainMenu, sendTextMessage } from "./whatsapp.js";
+import {
+  buildUpcomingBookingsText,
+  sendCtaUrl,
+  sendFlowMessage,
+  sendMainMenu,
+  sendTextMessage
+} from "./whatsapp.js";
 
 // Words that bring the customer back to the bot from a "chat with venue" handoff.
 const RESET_KEYWORDS = new Set(["menu", "hi", "hello", "start", "back"]);
@@ -249,14 +256,14 @@ async function respondToButton(from, buttonId, phoneNumberId, venueName, venueId
         );
       }
       break;
-    case "my_bookings":
+    case "my_bookings": {
       await setMode(from, "bot", { phoneNumberId });
-      await sendTextMessage(
-        from,
-        "You'll be able to view your upcoming bookings here shortly.",
-        phoneNumberId
-      );
+      // Every booking this number has, not just this venue's — the customer
+      // asked what they have coming up, and each line names its own venue.
+      const bookings = await fetchUpcomingBookings(from);
+      await sendTextMessage(from, buildUpcomingBookingsText(bookings), phoneNumberId);
       break;
+    }
     case "chat_venue":
       // Hand off to the venue. Under coexistence the customer's next messages
       // land in the owner's Business app; here we just stop auto-replying.

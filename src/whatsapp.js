@@ -1,6 +1,7 @@
 import axios from "axios";
 import { config, assertCanSendMessages } from "./config.js";
 import { logInfo } from "./logger.js";
+import { toTitleCase } from "./venues.js";
 
 function messagesUrl(phoneNumberId) {
   return `https://graph.facebook.com/${config.graphApiVersion}/${phoneNumberId}/messages`;
@@ -92,6 +93,66 @@ export async function sendCtaUrl(to, bodyText, buttonText, url, phoneNumberId) {
   );
 }
 
+// "18:30" -> "6:30 PM", dropping a ":00" that buys nothing.
+function to12h(hhmm) {
+  const [h, m] = String(hhmm).split(":").map(Number);
+  if (Number.isNaN(h)) return String(hhmm);
+  const period = h >= 12 && h < 24 ? "PM" : "AM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}${m ? `:${String(m).padStart(2, "0")}` : ""} ${period}`;
+}
+
+// "2026-07-30" -> "Thu, 30 Jul". Today and tomorrow are named instead, since
+// that is what a customer checking their bookings actually cares about.
+function friendlyDate(dateStr, today = new Date()) {
+  const d = new Date(`${dateStr}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return String(dateStr);
+  const midnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const days = Math.round((d - midnight) / 86400000);
+  if (days === 0) return "Today";
+  if (days === 1) return "Tomorrow";
+  const weekday = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()];
+  const month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()];
+  return `${weekday}, ${d.getDate()} ${month}`;
+}
+
+// "Legends Arena · Court 1", or just the venue when the court carries the same
+// name — single-court venues in this Firestore store court_name == venue_name,
+// which would otherwise render as "Legends Arena · LEGENDS ARENA".
+function venueAndCourt(venueName, courtName) {
+  const venue = venueName ? toTitleCase(venueName) : "Venue";
+  const court = courtName ? toTitleCase(courtName) : "";
+  if (!court || court.toLowerCase() === venue.toLowerCase()) return venue;
+  return `${venue} · ${court}`;
+}
+
+// The "My Bookings" reply. Pure so the copy can be tested without a send, and
+// so it can become a template body later. `bookings` is already filtered to
+// upcoming confirmed ones and sorted soonest-first by fetchUpcomingBookings.
+export function buildUpcomingBookingsText(bookings) {
+  if (!bookings?.length) {
+    return (
+      "📭 You don't have any upcoming bookings yet.\n\n" +
+      "Tap *Book a Slot* from the menu to grab your next game — type *menu* to bring it back. 🏟️"
+    );
+  }
+
+  const lines = bookings.map((b) => {
+    const paid = Number(b.paid_amount) || 0;
+    const total = Number(b.final_amount) || 0;
+    const balance = Math.max(total - paid, 0);
+    return (
+      `🏟️ *${venueAndCourt(b.venue_name, b.court_name)}*\n` +
+      (b.sport?.name ? `🎾 ${b.sport.name}\n` : "") +
+      `📅 ${friendlyDate(b.date)} · ⏰ ${to12h(b.start_time)} – ${to12h(b.end_time)}` +
+      (balance > 0 ? `\n💵 Balance ₹${balance} payable at the venue` : "")
+    );
+  });
+
+  const heading = bookings.length === 1 ? "📋 *Your upcoming booking*" : "📋 *Your upcoming bookings*";
+  return `${heading}\n\n${lines.join("\n\n")}\n\nType *menu* for more options.`;
+}
+
 // Confirmation copy, kept pure so it can be reused as the body parameter of an
 // approved template later without touching the transport.
 export function buildBookingConfirmationText(booking) {
@@ -100,10 +161,10 @@ export function buildBookingConfirmationText(booking) {
   const balance = Math.max(total - paid, 0);
   return (
     `✅ *Booking confirmed!*\n\n` +
-    `🏟️ ${booking.venue_name || "Venue"} · ${booking.court_name || "Court"}\n` +
+    `🏟️ ${venueAndCourt(booking.venue_name, booking.court_name)}\n` +
     `🎾 ${booking.sport?.name || ""}\n` +
-    `📅 ${booking.date}\n` +
-    `⏰ ${booking.start_time} – ${booking.end_time}\n` +
+    `📅 ${friendlyDate(booking.date)}\n` +
+    `⏰ ${to12h(booking.start_time)} – ${to12h(booking.end_time)}\n` +
     `💳 Paid ₹${paid}` +
     (balance > 0 ? `\n💵 Balance ₹${balance} payable at the venue` : "") +
     (booking.venue_contact ? `\n\n📞 ${booking.venue_contact}` : "") +
