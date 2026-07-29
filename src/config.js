@@ -27,8 +27,12 @@ export const config = {
   verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || "",
   metaAppSecret: process.env.META_APP_SECRET || "",
   validateMetaSignature: process.env.VALIDATE_META_SIGNATURE !== "false",
-  // Fallback venue name for the greeting when no wa_numbers mapping is found.
-  venueName: process.env.VENUE_NAME || "our venue",
+  // Fallback venue used when no venue_details doc carries the incoming
+  // phone_number_id. This is the venue_details DOCUMENT ID (the venueId used
+  // throughout the GameOn app), not a display name — the name is read from the
+  // doc so it never drifts from Firestore. Empty means no fallback: an
+  // unmapped number gets a generic greeting and cannot book.
+  fallbackVenueId: process.env.VENUE_ID || "",
   // How long a "chat with venue" handoff keeps the bot silent before it
   // resumes on its own (customer can also type "menu" to resume immediately).
   humanModeTtlMs: Number(process.env.HUMAN_MODE_TTL_MS || 6 * 60 * 60 * 1000),
