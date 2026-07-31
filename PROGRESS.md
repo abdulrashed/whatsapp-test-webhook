@@ -31,7 +31,7 @@ Verified against live Firestore `turf-app-930c5`.
 ## Remaining
 
 - **PHP edit** in the GameOn backend: `v2_webhook_live.php` → POST
-  `/payment-notify` after capture (FLOW_SETUP.md §7). Until this lands the
+  `/payment-notify` after capture (docs/FLOW_SETUP.md §7). Until this lands the
   booking is paid but no WhatsApp confirmation goes out. The only external
   change still required.
 - **Stale-booking sweep** — a booking whose payment never captures stays

@@ -5,7 +5,7 @@ Arena). Node/Express locally, Vercel serverless in production. Reads/writes the
 existing GameOn Firestore (`turf-app-930c5`); money stays with the PHP Razorpay
 webhook.
 
-- Setup on Meta's side: [FLOW_SETUP.md](FLOW_SETUP.md)
+- Setup on Meta's side: [FLOW_SETUP.md](docs/FLOW_SETUP.md)
 - Current status: [PROGRESS.md](PROGRESS.md)
 
 ## What this does
