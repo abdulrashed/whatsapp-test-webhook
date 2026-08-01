@@ -174,10 +174,55 @@ export function buildBookingConfirmationText(booking) {
 
 // Sent by the Razorpay webhook relay moments after capture, so the 24-hour
 // customer-service window is still open and a free-form message is allowed —
-// no approved template needed. Swap sendTextMessage for a template send here
-// if confirmations ever have to go out later than that.
+// no approved template needed. Swap sendTextMessage for sendBookingTemplate
+// here if confirmations ever have to go out later than that.
 export async function sendBookingConfirmation(to, booking, phoneNumberId) {
-  return sendTextMessage(to, buildBookingConfirmationText(booking), phoneNumberId);
+  return sendBookingTemplate(to, booking, phoneNumberId);
+}
+
+// The approved `booking_confirmed` template (see scripts/create-template.js for
+// its canonical shape). Unlike sendBookingConfirmation's free-form text, a
+// template can be delivered outside the 24-hour service window and carries the
+// "My Bookings" / "Book Again" quick-reply buttons.
+//
+// Only the BODY takes parameters — the header, footer and buttons are static.
+// Two things MUST match how the template was registered on Meta or the send is
+// rejected (error 132000/132001):
+//   - parameter style: NAMED here (parameter_name). If the template was created
+//     with numbered {{1}}..{{6}} instead, drop parameter_name and keep this
+//     exact order: venue, sport, date, time, paid, total.
+//   - language.code: "en" here. Must equal the template's language.
+// Named param values may not contain a newline, tab, or 4+ spaces (Meta rule),
+// which the fields below all satisfy.
+export async function sendBookingTemplate(to, booking, phoneNumberId) {
+  const paid = Number(booking.paid_amount) || 0;
+  const total = Number(booking.final_amount) || 0;
+  return sendMessage(
+    {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "template",
+      template: {
+        name: "booking_confirmed",
+        language: { code: "en" },
+        components: [
+          {
+            type: "body",
+            parameters: [
+              { type: "text", parameter_name: "venue", text: venueAndCourt(booking.venue_name, booking.court_name) },
+              { type: "text", parameter_name: "sport", text: booking.sport?.name || "" },
+              { type: "text", parameter_name: "date", text: friendlyDate(booking.date) },
+              { type: "text", parameter_name: "time", text: `${to12h(booking.start_time)} – ${to12h(booking.end_time)}` },
+              { type: "text", parameter_name: "paid", text: String(paid) },
+              { type: "text", parameter_name: "total", text: String(total) }
+            ]
+          }
+        ]
+      }
+    },
+    phoneNumberId
+  );
 }
 
 // Sends an interactive Flow message that opens the booking Flow in-app. The

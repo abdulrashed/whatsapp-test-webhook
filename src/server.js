@@ -5,6 +5,7 @@ import { config } from "./config.js";
 import { logInfo } from "./logger.js";
 import { sendTemplateHelloWorld } from "./whatsapp.js";
 import { webhookRouter } from "./webhook.js";
+import { paymentNotifyRouter } from "./payment-notify.js";
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.post("/send-template", async (req, res, next) => {
 });
 
 app.use("/webhook", webhookRouter);
+app.use("/payment-notify", paymentNotifyRouter);
 
 app.use((err, _req, res, _next) => {
   const status = err.response?.status || 500;
