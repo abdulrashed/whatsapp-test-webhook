@@ -57,6 +57,12 @@ on money; after it captures it POSTs `/payment-notify` (HMAC-signed), and this
 repo — which holds the WhatsApp token — sends the confirmation. Deduped via
 `wa_confirmation_sent_at` ([api/payment-notify.js](api/payment-notify.js)).
 
+The confirmation uses the `booking_confirmed` message template, which is
+**created manually in WhatsApp Manager, once per WABA** (each venue onboards
+under its own WABA). Match the `en` template with six NAMED body params —
+`venue`, `sport`, `date`, `time`, `paid`, `total` — to what
+[api/payment-notify.js](api/payment-notify.js) sends.
+
 Deliberately **not** here: finance sync, coupons, refunds, capture. The WhatsApp
 path only ever writes a `processing` booking; the PHP webhook owns the rest.
 
