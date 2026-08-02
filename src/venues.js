@@ -35,7 +35,17 @@ function toVenue(id, data) {
     venueId: id,
     venueName: rawName ? toTitleCase(rawName) : GENERIC_NAME,
     // Optional per-venue custom greeting; absent on normal venue docs.
-    greeting: data.wa_greeting
+    greeting: data.wa_greeting,
+    // Per-venue WhatsApp access token. In the Tech Provider model each venue's
+    // number lives under its OWN WABA, so it has its own token — stored on the
+    // venue doc alongside phone_number_id. Empty on venues that share GameOn's
+    // own WABA; those fall back to the global config token (see
+    // resolveAccessToken). This is the only secret held per-venue.
+    accessToken: data.wa_access_token || "",
+    // Per-venue booking Flow id. Flows live on the WABA, so an own-portfolio
+    // venue has its own published Flow. Empty on venues sharing GameOn's WABA;
+    // the caller falls back to the global config.flowId then.
+    flowId: data.wa_flow_id || ""
   };
 }
 
@@ -66,6 +76,41 @@ async function fallbackVenue() {
 // Falls back to the VENUE_ID venue when no venue carries this phone_number_id
 // yet, so the menu still greets sensibly — and can still book — before
 // onboarding.
+// Per-number token cache. The token belongs to the WABA behind a
+// phone_number_id and effectively never changes (Tech Provider system-user
+// tokens are long-lived), so a short TTL spares a Firestore read on every send
+// without risking meaningful staleness.
+const TOKEN_TTL_MS = 5 * 60 * 1000;
+const tokenCache = new Map(); // phoneNumberId -> { token, expiresAt }
+
+// Resolves the WhatsApp access token to authorize a send FROM a given
+// phone_number_id. Prefers the token stored on the number's venue doc (its own
+// WABA); falls back to the global WHATSAPP_TOKEN so numbers that share GameOn's
+// own WABA keep working with no per-venue token. Cached per number.
+export async function resolveAccessToken(phoneNumberId) {
+  const key = phoneNumberId || "__default__";
+  const hit = tokenCache.get(key);
+  if (hit && hit.expiresAt > Date.now()) {
+    return hit.token;
+  }
+
+  let token = config.whatsappToken;
+  try {
+    const { accessToken } = await resolveVenue(phoneNumberId);
+    token = accessToken || config.whatsappToken;
+  } catch (error) {
+    // resolveVenue already fails open, but guard the token path too so a lookup
+    // hiccup falls back to the global token rather than blocking the send.
+    logWarn("Failed to resolve access token, using global token", {
+      phoneNumberId,
+      error: error?.message
+    });
+  }
+
+  tokenCache.set(key, { token, expiresAt: Date.now() + TOKEN_TTL_MS });
+  return token;
+}
+
 export async function resolveVenue(phoneNumberId) {
   if (!phoneNumberId) {
     return fallbackVenue();

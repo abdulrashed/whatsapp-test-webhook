@@ -218,10 +218,10 @@ async function respondToMessage(from, message, phoneNumberId) {
     return;
   }
 
-  const { venueId, venueName } = await resolveVenue(phoneNumberId);
+  const { venueId, venueName, flowId } = await resolveVenue(phoneNumberId);
 
   if (replyId) {
-    await respondToButton(from, replyId, phoneNumberId, venueName, venueId);
+    await respondToButton(from, replyId, phoneNumberId, venueName, venueId, flowId);
     return;
   }
 
@@ -230,15 +230,18 @@ async function respondToMessage(from, message, phoneNumberId) {
   await sendMainMenu(from, venueName, phoneNumberId);
 }
 
-async function respondToButton(from, buttonId, phoneNumberId, venueName, venueId) {
+async function respondToButton(from, buttonId, phoneNumberId, venueName, venueId, venueFlowId) {
+  // The venue's own published Flow (own-portfolio); global config.flowId is the
+  // fallback for a number under GameOn's own WABA.
+  const flowId = venueFlowId || config.flowId;
   switch (buttonId) {
     case "book_slot":
       await setMode(from, "bot", { phoneNumberId });
-      if (config.flowId && venueId) {
+      if (flowId && venueId) {
         await sendFlowMessage(
           from,
           {
-            flowId: config.flowId,
+            flowId,
             flowToken: buildFlowToken(venueId, from),
             flowCta: "Book a Slot",
             header: venueName,
