@@ -6,8 +6,9 @@ key to a single number, so each one repeats it. Base URL:
 `https://whatsapp-test-webhook.vercel.app`
 
 Prerequisites: the webhook already replies with the menu, you know the
-**Phone Number ID**, `WHATSAPP_TOKEN` in Vercel is valid, and `openssl` is
-available (Git Bash has it).
+**Phone Number ID**, you have a valid access token for that number's WABA (the
+value you'll store as the venue's `wa_access_token`), and `openssl` is available
+(Git Bash has it).
 
 ## 1. Create the Flow
 
@@ -41,8 +42,9 @@ minute).
 
 ## 4. Set the Vercel env vars
 
-Settings → Environment Variables → add `FLOW_ID`, `FLOW_PRIVATE_KEY`,
-`FLOW_KEY_PASSPHRASE`, `VENUE_NAME`, then **redeploy**.
+Only the RSA key is global. Settings → Environment Variables → add
+`FLOW_PRIVATE_KEY` and `FLOW_KEY_PASSPHRASE`, then **redeploy**. The Flow id is
+**not** an env var — it's per-venue (`wa_flow_id`), seeded in step 5.
 
 `FLOW_PRIVATE_KEY` must be one line with `\n` escapes:
 
@@ -63,11 +65,13 @@ Seed it with the helper, which prints the matching venue first and only writes
 with `--write`:
 
 ```bash
-node scripts/set-venue-phone-number.js "legends" <PHONE_NUMBER_ID> --write
+node scripts/set-venue-phone-number.js "legends" <PHONE_NUMBER_ID> --token <TOKEN> --flow-id <FLOW_ID> --write
 ```
 
-Until this field exists, "Book a Slot" replies "not set up yet" by design and the
-greeting falls back to `VENUE_NAME`.
+`--token` (→ `wa_access_token`) and `--flow-id` (→ `wa_flow_id`) are required —
+there is no global fallback. Until the doc carries `phone_number_id`, an inbound
+number resolves to no venue: it can greet (generic name) but "Book a Slot" replies
+"not set up yet" by design.
 
 ## 6. Test
 
@@ -83,10 +87,10 @@ greeting falls back to `VENUE_NAME`.
 |---|---|
 | Health check fails, "Decryption failed" (421) | Public key not uploaded/mismatched, or wrong `FLOW_KEY_PASSPHRASE` |
 | "Signature verification failed" (432) | Wrong `META_APP_SECRET` / `VALIDATE_META_SIGNATURE` |
-| "Book a Slot" says not set up | `FLOW_ID` missing, or no `venue_details` doc carries this `phone_number_id` |
+| "Book a Slot" says not set up | venue's `wa_flow_id` missing, or no `venue_details` doc carries this `phone_number_id` |
 | "Something went wrong" in the Flow | Flow JSON in Builder is out of sync with the deployed endpoint — re-push **and** re-publish |
 | Empty screen | No availability (INFO screen) or a Firestore read failed — check `/flow` logs |
-| No reply at all | Expired `WHATSAPP_TOKEN` (`OAuthException 190`) |
+| No reply at all | Expired venue `wa_access_token` (`OAuthException 190`) |
 | Pay link errors | `CHECKOUT_BASE_URL` / `CREATE_ORDER_URL` wrong, or the PHP backend rejected the order |
 
 ## 7. Payment confirmation (`/payment-notify`)

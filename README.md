@@ -85,9 +85,11 @@ mode per customer).
 
 The venue↔number map is a `phone_number_id` field on the venue's own
 `venue_details` doc — there is no separate mapping collection. Seed it with
-[scripts/set-venue-phone-number.js](scripts/set-venue-phone-number.js). A venue
-in its **own** portfolio also carries a `wa_access_token` on that doc (its WABA's
-token); numbers under GameOn's own WABA fall back to the global `WHATSAPP_TOKEN`.
+[scripts/set-venue-phone-number.js](scripts/set-venue-phone-number.js). This is a
+multi-tenant deployment with **no global send credentials**: every venue carries
+its own `wa_access_token` (its WABA's token) and `wa_flow_id` on that doc
+alongside `phone_number_id`. A number that maps to no venue can greet but not
+send or book.
 
 To bring a **new venue** live end to end, follow the operator runbook
 [docs/ADD-VENUE.md](docs/ADD-VENUE.md) (token → subscribe WABA → Flow → template →
@@ -96,18 +98,16 @@ seed → verify).
 ## Environment
 
 Same keys locally (`.env`) and in Vercel. See [.env.example](.env.example) for
-the full annotated list; the required ones:
+the full annotated list. These are **global** values only — the per-venue send
+token, phone number and Flow id live on each `venue_details` doc
+(`wa_access_token`, `phone_number_id`, `wa_flow_id`), not here:
 
 ```env
 GRAPH_API_VERSION=v25.0
-WHATSAPP_TOKEN=            # permanent token; temp ones expire in 24h (OAuthException 190)
-WHATSAPP_PHONE_NUMBER_ID=
-WHATSAPP_WABA_ID=
-WHATSAPP_VERIFY_TOKEN=     # any random string, mirrored in Meta
-META_APP_SECRET=
+WHATSAPP_VERIFY_TOKEN=     # any random string, mirrored in Meta (webhook handshake)
+META_APP_SECRET=           # validates X-Hub-Signature-256 on the inbound webhook
 VALIDATE_META_SIGNATURE=true
-FLOW_ID=                   # from Flow Builder
-FLOW_PRIVATE_KEY=          # PEM as one line with \n escapes
+FLOW_PRIVATE_KEY=          # one shared RSA key (PEM, \n escaped) that decrypts Flow requests
 FLOW_KEY_PASSPHRASE=
 PAYMENT_NOTIFY_SECRET=     # shared with v2_webhook_live.php
 ```
