@@ -9,11 +9,12 @@
 //
 // Without --write it only PRINTS the matching venue(s) so you can confirm the
 // right one before touching production data. With --write it updates the doc,
-// but only when exactly one venue matches the name substring. --token and
-// --flow-id are optional: omit them for a number that shares GameOn's own WABA
-// (it falls back to the global WHATSAPP_TOKEN / FLOW_ID); pass them for a number
-// onboarded under the venue's own portfolio, which has its own WABA token
-// (wa_access_token) and its own published Flow (wa_flow_id).
+// but only when exactly one venue matches the name substring.
+//
+// This is a multi-tenant deployment with NO global send credentials, so every
+// venue needs its own access token (wa_access_token) and published Flow id
+// (wa_flow_id). Pass --token and --flow-id here (or set them on the doc in a
+// second pass) — a venue without them cannot send or start a booking Flow.
 import { collection, doc, getDocs, updateDoc } from "firebase/firestore";
 
 import { db } from "../src/firebase.js";

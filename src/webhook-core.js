@@ -231,9 +231,10 @@ async function respondToMessage(from, message, phoneNumberId) {
 }
 
 async function respondToButton(from, buttonId, phoneNumberId, venueName, venueId, venueFlowId) {
-  // The venue's own published Flow (own-portfolio); global config.flowId is the
-  // fallback for a number under GameOn's own WABA.
-  const flowId = venueFlowId || config.flowId;
+  // The venue's own published Flow (venue_details.wa_flow_id). No global
+  // fallback: a number with no flow id falls through to the not-configured
+  // message below.
+  const flowId = venueFlowId;
   switch (buttonId) {
     case "book_slot":
       await setMode(from, "bot", { phoneNumberId });

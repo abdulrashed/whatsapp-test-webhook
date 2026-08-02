@@ -2,12 +2,11 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const required = [
-  "WHATSAPP_TOKEN",
-  "WHATSAPP_PHONE_NUMBER_ID",
-  "WHATSAPP_WABA_ID",
-  "WHATSAPP_VERIFY_TOKEN"
-];
+// The per-venue send credentials (access token, phone_number_id, flow id) live
+// on each venue_details doc, not in env — this is a multi-tenant deployment, so
+// there is no single global sender. The only required global value is the
+// webhook verify token used for the one Meta webhook handshake.
+const required = ["WHATSAPP_VERIFY_TOKEN"];
 
 const missing = required.filter((key) => !process.env[key]);
 
@@ -21,9 +20,10 @@ export const config = {
   port: Number(process.env.PORT || 3000),
   nodeEnv: process.env.NODE_ENV || "development",
   graphApiVersion: process.env.GRAPH_API_VERSION || "v25.0",
-  whatsappToken: process.env.WHATSAPP_TOKEN || "",
-  phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || "",
-  wabaId: process.env.WHATSAPP_WABA_ID || "",
+  // No global whatsappToken / phoneNumberId / flowId / wabaId: every venue
+  // carries its own wa_access_token, phone_number_id and wa_flow_id in
+  // venue_details, and sends are resolved per-number (see
+  // venues.resolveAccessToken / resolveVenue).
   verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || "",
   metaAppSecret: process.env.META_APP_SECRET || "",
   validateMetaSignature: process.env.VALIDATE_META_SIGNATURE !== "false",
@@ -36,10 +36,10 @@ export const config = {
   // How long a "chat with venue" handoff keeps the bot silent before it
   // resumes on its own (customer can also type "menu" to resume immediately).
   humanModeTtlMs: Number(process.env.HUMAN_MODE_TTL_MS || 6 * 60 * 60 * 1000),
-  // WhatsApp Flow endpoint. FLOW_PRIVATE_KEY is the RSA private key (PEM) whose
-  // public half is uploaded to Meta; \n may be escaped in the env var. FLOW_ID
-  // is the published Flow's id, used when sending the Flow message.
-  flowId: process.env.FLOW_ID || "",
+  // WhatsApp Flow endpoint decryption. FLOW_PRIVATE_KEY is the RSA private key
+  // (PEM) whose public half is uploaded to Meta; \n may be escaped in the env
+  // var. The published Flow's id is per-venue (venue_details.wa_flow_id), not
+  // here — this key only decrypts the Flow data-exchange requests.
   flowPrivateKey: (process.env.FLOW_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
   flowKeyPassphrase: process.env.FLOW_KEY_PASSPHRASE || "",
   // Base URL of the hosted Razorpay checkout page (v2_checkout_live.html).

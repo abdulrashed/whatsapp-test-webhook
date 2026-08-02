@@ -9,11 +9,11 @@ function messagesUrl(phoneNumberId) {
 
 // The sender number and its access token both key off phone_number_id: each
 // number sends from its own /{phoneNumberId}/messages endpoint authorized by
-// its own WABA token (resolveAccessToken, which falls back to the global token
-// for numbers sharing GameOn's WABA). Callers still pass only phoneNumberId —
-// they never handle tokens.
+// its own WABA token (resolveAccessToken reads it from the number's venue doc).
+// Callers must pass the phoneNumberId that received the message — there is no
+// global sender — but they never handle tokens themselves.
 async function sendMessage(payload, phoneNumberId) {
-  const senderId = phoneNumberId || config.phoneNumberId;
+  const senderId = phoneNumberId;
   const token = await resolveAccessToken(phoneNumberId);
 
   if (!senderId || !token) {

@@ -23,21 +23,25 @@ app.get("/health", (_req, res) => {
     ok: true,
     service: "whatsapp-test-webhook",
     graphApiVersion: config.graphApiVersion,
-    phoneNumberIdConfigured: Boolean(config.phoneNumberId),
-    wabaIdConfigured: Boolean(config.wabaId),
     signatureValidationEnabled: config.validateMetaSignature
   });
 });
 
 app.post("/send-template", async (req, res, next) => {
   try {
-    const { to } = req.body;
+    const { to, phone_number_id: phoneNumberId } = req.body;
     if (!to) {
       res.status(400).json({ error: "Missing required body field: to" });
       return;
     }
+    // Sends are per-venue now: this manual test endpoint needs the sending
+    // number so resolveAccessToken can find that venue's token.
+    if (!phoneNumberId) {
+      res.status(400).json({ error: "Missing required body field: phone_number_id" });
+      return;
+    }
 
-    const result = await sendTemplateHelloWorld(to);
+    const result = await sendTemplateHelloWorld(to, phoneNumberId);
     res.json(result);
   } catch (error) {
     next(error);

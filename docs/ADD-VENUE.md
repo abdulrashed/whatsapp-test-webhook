@@ -13,15 +13,21 @@ This complements the deep-dives: encryption/Flow mechanics live in
 
 Base URL: `https://whatsapp-test-webhook.vercel.app`
 
-## Model check — does this venue have its OWN portfolio?
+## Model check — every venue carries its own credentials
 
-| Situation | Token needed? | Flow/template needed? |
+This is a **fully multi-tenant** deployment: there are **no global send
+credentials** in env. Every venue **must** carry its own `wa_access_token`,
+`phone_number_id` and `wa_flow_id` on its `venue_details` doc, regardless of
+which WABA its number belongs to.
+
+| Situation | Token stored on doc? | Flow/template |
 |---|---|---|
-| Number under **GameOn's own WABA** (the one whose token is in Vercel `WHATSAPP_TOKEN`) | No — global token is the fallback | Can reuse the Flow already on that WABA |
-| Number under the **venue's own portfolio/WABA** (the normal case) | **Yes — its own `wa_access_token`** | **Yes — its own Flow + template on that WABA** |
+| Number under the **venue's own portfolio/WABA** (the normal case) | **Yes — its own `wa_access_token`** | **Its own Flow + template on that WABA** |
+| Number under **GameOn's own WABA** | **Yes — store that WABA's token as `wa_access_token`** | Reuse the Flow on that WABA, but still store its id as `wa_flow_id` |
 
-Everything below is the **own-portfolio** path. A token scopes to exactly one
-WABA, so a venue in its own portfolio cannot use the global token.
+A token scopes to exactly one WABA, so each venue's `wa_access_token` is the token
+for whichever WABA its number lives under. Everything below is the standard
+own-portfolio path.
 
 ## Prerequisites (from the owner)
 
@@ -89,9 +95,9 @@ Flows live **on the WABA**, so each own-portfolio venue needs its own. Follow
 — you'll seed it in §7 as `wa_flow_id`.
 
 The code resolves it per venue: `resolveVenue` returns the doc's `wa_flow_id` and
-`respondToButton` prefers it, falling back to the global `FLOW_ID` env only for a
-number under GameOn's own WABA. So an own-portfolio venue **must** carry
-`wa_flow_id`, exactly like its token.
+`respondToButton` uses it directly — there is no global fallback. So every venue
+**must** carry `wa_flow_id`, exactly like its token; without it "Book a Slot"
+shows the not-configured message.
 
 ## 6. Provision the `booking_confirmed` template on this WABA
 
@@ -117,9 +123,8 @@ node scripts/set-venue-phone-number.js "<name substring>" <PHONE_NUMBER_ID> --to
 node scripts/set-venue-phone-number.js "<name substring>" <PHONE_NUMBER_ID> --token <TOKEN> --flow-id <FLOW_ID> --write
 ```
 
-Omit `--token` / `--flow-id` **only** for a number under GameOn's own WABA (it
-falls back to the global `WHATSAPP_TOKEN` / `FLOW_ID`). For an own-portfolio venue
-both are required.
+Both `--token` and `--flow-id` are **required for every venue** — there is no
+global fallback. A venue missing either cannot send or start a booking Flow.
 
 ## 8. Verify end to end
 
@@ -143,9 +148,9 @@ The confirmation send picks the venue's token automatically from
 | Item | Per-venue | Shared |
 |---|---|---|
 | `phone_number_id` (venue doc) | ✅ | |
-| `wa_access_token` (venue doc) | ✅ (own portfolio) | falls back to global |
+| `wa_access_token` (venue doc) | ✅ (required, no fallback) | |
 | WABA → app subscription | ✅ | |
-| Flow (+ Flow ID → `wa_flow_id`) | ✅ | falls back to global `FLOW_ID` |
+| Flow (+ Flow ID → `wa_flow_id`) | ✅ (required, no fallback) | |
 | `booking_confirmed` template | ✅ | |
 | RSA Flow keypair | | ✅ reuse, upload public key per number |
 | `/payment-notify` + PHP curl | | ✅ set once |

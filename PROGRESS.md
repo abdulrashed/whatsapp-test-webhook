@@ -18,8 +18,9 @@ Book a Slot → sport → date → court → time → duration → summary → P
   `processing` bookings. No finance/coupon logic — the PHP webhook owns money.
 - **Flow** — `src/flow-crypto.js`, `src/flow-core.js` (screen router),
   `api/flow.js`, `flows/book-slot.json`. Encryption verified both ways (Flow
-  Builder health check green); Flow created, published, `FLOW_ID` and the RSA
-  keypair set in Vercel; the venue's `phone_number_id` is seeded.
+  Builder health check green); Flow created and published; the RSA keypair is set
+  in Vercel (global), and the venue's `phone_number_id`, `wa_access_token` and
+  `wa_flow_id` are seeded on its `venue_details` doc (no global send creds).
 - **Payment** — Razorpay order via the existing PHP endpoint, Pay Now CTA to the
   hosted checkout page (`src/payments.js`).
 - **My Bookings** — `fetchUpcomingBookings` + `buildUpcomingBookingsText`, soonest
