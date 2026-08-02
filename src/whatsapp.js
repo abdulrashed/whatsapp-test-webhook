@@ -1,19 +1,30 @@
 import axios from "axios";
-import { config, assertCanSendMessages } from "./config.js";
+import { config } from "./config.js";
 import { logInfo } from "./logger.js";
-import { toTitleCase } from "./venues.js";
+import { resolveAccessToken, toTitleCase } from "./venues.js";
 
 function messagesUrl(phoneNumberId) {
   return `https://graph.facebook.com/${config.graphApiVersion}/${phoneNumberId}/messages`;
 }
 
+// The sender number and its access token both key off phone_number_id: each
+// number sends from its own /{phoneNumberId}/messages endpoint authorized by
+// its own WABA token (resolveAccessToken, which falls back to the global token
+// for numbers sharing GameOn's WABA). Callers still pass only phoneNumberId —
+// they never handle tokens.
 async function sendMessage(payload, phoneNumberId) {
-  assertCanSendMessages();
-
   const senderId = phoneNumberId || config.phoneNumberId;
+  const token = await resolveAccessToken(phoneNumberId);
+
+  if (!senderId || !token) {
+    throw new Error(
+      `Cannot send WhatsApp message. Missing ${!senderId ? "phone_number_id" : "access token"} for this number.`
+    );
+  }
+
   const response = await axios.post(messagesUrl(senderId), payload, {
     headers: {
-      Authorization: `Bearer ${config.whatsappToken}`,
+      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json"
     },
     timeout: 15000

@@ -63,12 +63,3 @@ export const config = {
     appId: process.env.FIREBASE_APP_ID || "1:355894469860:web:a268daa36bb5eb29a778f1"
   }
 };
-
-export function assertCanSendMessages() {
-  const sendRequired = ["whatsappToken", "phoneNumberId"];
-  const missingSendValues = sendRequired.filter((key) => !config[key]);
-
-  if (missingSendValues.length > 0) {
-    throw new Error(`Cannot send WhatsApp message. Missing config: ${missingSendValues.join(", ")}`);
-  }
-}

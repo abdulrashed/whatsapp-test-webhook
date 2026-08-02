@@ -85,7 +85,13 @@ mode per customer).
 
 The venue↔number map is a `phone_number_id` field on the venue's own
 `venue_details` doc — there is no separate mapping collection. Seed it with
-[scripts/set-venue-phone-number.js](scripts/set-venue-phone-number.js).
+[scripts/set-venue-phone-number.js](scripts/set-venue-phone-number.js). A venue
+in its **own** portfolio also carries a `wa_access_token` on that doc (its WABA's
+token); numbers under GameOn's own WABA fall back to the global `WHATSAPP_TOKEN`.
+
+To bring a **new venue** live end to end, follow the operator runbook
+[docs/ADD-VENUE.md](docs/ADD-VENUE.md) (token → subscribe WABA → Flow → template →
+seed → verify).
 
 ## Environment
 
